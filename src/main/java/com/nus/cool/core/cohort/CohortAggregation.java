@@ -15,8 +15,12 @@
  */
 package com.nus.cool.core.cohort;
 
+//<<<<<<< HEAD
 import static com.google.common.base.Preconditions.checkNotNull;
 
+//=======
+import com.google.common.collect.Lists;
+//>>>>>>> Add seekToReuseBirthTuple()
 import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.aggregator.Aggregator;
 import com.nus.cool.core.cohort.aggregator.SumAggregator;
@@ -31,6 +35,7 @@ import com.nus.cool.core.io.storevector.RLEInputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 
@@ -109,43 +114,139 @@ public class CohortAggregation implements Operator {
       this.bBirthActionChunkIDs[i] = id;
     }
 
-    int min = cohortField.minKey();
-    int cardinality = cohortField.maxKey() - min + 1;
-    int cohortSize = actionTimeField.maxKey() - actionTimeField.minKey() + 1 + 1;
-    long[][] chunkResults = new long[cardinality][cohortSize];
+//<<<<<<< HEAD
+//    int min = cohortField.minKey();
+//    int cardinality = cohortField.maxKey() - min + 1;
+//    int cohortSize = actionTimeField.maxKey() - actionTimeField.minKey() + 1 + 1;
+//    long[][] chunkResults = new long[cardinality][cohortSize];
+//
+//    InputVector cohortInput = cohortField.getValueVector();
+//    InputVector actionTimeInput = actionTimeField.getValueVector();
+//    InputVector metricInput = metricField == null ? null : metricField.getValueVector();
+//    Aggregator aggregator = newAggregator();
+//    int minAllowedAge = 0;
+//    int maxAllowedAge = cohortSize - 1;
+//    aggregator.init(metricInput, actionTimeInput, cohortSize, minAllowedAge, maxAllowedAge,
+//        this.query.getAgeInterval());
+//
+//    RLEInputVector appInput = (RLEInputVector) appField.getValueVector();
+//    appInput.skipTo(0);
+//    RLEInputVector.Block appBlock = new RLEInputVector.Block();
+//    FieldFilter appFilter = this.sigma.getAppFilter();
+//    BitSet bv = new BitSet(chunk.getRecords());
+//    this.bs = new BitSet(chunk.getRecords());
+//
+//    while (appInput.hasNext()) {
+//      appInput.nextBlock(appBlock);
+//      if (appFilter.accept(appBlock.value)) {
+//          if (!(userField.getValueVector() instanceof RLEInputVector)) {
+//              continue;
+//          }
+//        RLEInputVector userInput = (RLEInputVector) userField.getValueVector();
+//        userInput.skipTo(0);
+//        RLEInputVector.Block userBlock = new RLEInputVector.Block();
+//        while (userInput.hasNext()) {
+//          userInput.nextBlock(userBlock);
+//            if (userBlock.off < appBlock.off) {
+//                continue;
+//            }
+//            if (userBlock.off > appBlock.off + appBlock.len) {
+//                break;
+//=======
+        int min = cohortField.minKey();
+        int cardinality = cohortField.maxKey() - min + 1;
+        int cohortSize = actionTimeField.maxKey() - actionTimeField.minKey() + 1 + 1;
+        long[][] chunkResults = new long[cardinality][cohortSize];
 
-    InputVector cohortInput = cohortField.getValueVector();
-    InputVector actionTimeInput = actionTimeField.getValueVector();
-    InputVector metricInput = metricField == null ? null : metricField.getValueVector();
-    Aggregator aggregator = newAggregator();
-    int minAllowedAge = 0;
-    int maxAllowedAge = cohortSize - 1;
-    aggregator.init(metricInput, actionTimeInput, cohortSize, minAllowedAge, maxAllowedAge,
-        this.query.getAgeInterval());
+        InputVector cohortInput = cohortField.getValueVector();
+        InputVector actionTimeInput = actionTimeField.getValueVector();
+        InputVector metricInput = metricField == null ? null : metricField.getValueVector();
+        Aggregator aggregator = newAggregator();
+        int minAllowedAge = 0;
+        int maxAllowedAge = cohortSize - 1;
+        aggregator.init(metricInput, actionTimeInput, cohortSize, minAllowedAge, maxAllowedAge, this.query.getAgeInterval());
 
-    RLEInputVector appInput = (RLEInputVector) appField.getValueVector();
-    appInput.skipTo(0);
-    RLEInputVector.Block appBlock = new RLEInputVector.Block();
-    FieldFilter appFilter = this.sigma.getAppFilter();
-    BitSet bv = new BitSet(chunk.getRecords());
-    this.bs = new BitSet(chunk.getRecords());
+        RLEInputVector appInput = (RLEInputVector) appField.getValueVector();
+        appInput.skipTo(0);
+        RLEInputVector.Block appBlock = new RLEInputVector.Block();
+        FieldFilter appFilter = this.sigma.getAppFilter();
+        BitSet bv = new BitSet(chunk.getRecords());
+        this.bs = new BitSet(chunk.getRecords());
 
-    while (appInput.hasNext()) {
-      appInput.nextBlock(appBlock);
-      if (appFilter.accept(appBlock.value)) {
-          if (!(userField.getValueVector() instanceof RLEInputVector)) {
-              continue;
-          }
-        RLEInputVector userInput = (RLEInputVector) userField.getValueVector();
-        userInput.skipTo(0);
-        RLEInputVector.Block userBlock = new RLEInputVector.Block();
-        while (userInput.hasNext()) {
-          userInput.nextBlock(userBlock);
-            if (userBlock.off < appBlock.off) {
-                continue;
-            }
-            if (userBlock.off > appBlock.off + appBlock.len) {
-                break;
+        while (appInput.hasNext()) {
+            appInput.nextBlock(appBlock);
+            if (appFilter.accept(appBlock.value)) {
+                if (!(userField.getValueVector() instanceof RLEInputVector))
+                    continue;
+                RLEInputVector userInput = (RLEInputVector) userField.getValueVector();
+                userInput.skipTo(0);
+                RLEInputVector.Block userBlock = new RLEInputVector.Block();
+                while (userInput.hasNext()) {
+                    userInput.nextBlock(userBlock);
+                    if (userBlock.off < appBlock.off)
+                        continue;
+                    if (userBlock.off > appBlock.off + appBlock.len)
+                        break;
+
+                    int begin = userBlock.off;
+                    int end = userBlock.off + userBlock.len;
+
+                    boolean reuse = true;
+                    int birthOff;
+
+                    if (reuse) {
+                        List<BitSet> bitSetList = Lists.newArrayList();
+
+                        BitSet bitSet1 = new BitSet(10000);
+                        for(int i=20; i<10000; i+=1314)
+                            bitSet1.set(i);
+                        bitSetList.add(bitSet1);
+
+                        BitSet bitSet2 = new BitSet(10000);
+                        for(int i=55; i<10000; i+=523)
+                            bitSet2.set(i);
+                        bitSetList.add(bitSet2);
+
+                        BitSet bitSet3 = new BitSet(10000);
+                        for(int i=99; i<10000; i+=520)
+                            bitSet3.set(i);
+                        bitSetList.add(bitSet3);
+
+                        birthOff = seekToReuseBirthTuple(begin, end, bitSetList);
+                        System.out.println("begin: " + begin);
+                        System.out.println("end: " + end);
+                        System.out.println("birthOff: " + birthOff);
+                        System.out.println();
+
+                    }
+                    else {
+                        InputVector actionInput = actionField.getValueVector();
+                        actionInput.skipTo(begin);
+                        birthOff = seekToBirthTuple(begin, end, actionInput);
+                    }
+
+                    if (birthOff == end) {
+                        continue;
+                    }
+
+                    if (this.sigma.selectUser(birthOff)) {
+                        this.bs.set(begin, end);
+                        cohortInput.skipTo(birthOff);
+                        int cohort = cohortInput.next() - min;
+                        chunkResults[cohort][0]++;
+                        actionTimeInput.skipTo(birthOff);
+                        int birthTime = actionTimeInput.next();
+                        int ageOff = birthOff + 1;
+                        if (ageOff < end) {
+                            bv.set(birthOff + 1, end);
+                            this.sigma.selectAgeActivities(birthOff + 1, end, bv);
+                            if (!bv.isEmpty())
+                                aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
+                            bv.clear(birthOff + 1, end);
+                        }
+                    }
+                }
+//>>>>>>> Add seekToReuseBirthTuple()
             }
 
           int begin = userBlock.off;
@@ -175,8 +276,8 @@ public class CohortAggregation implements Operator {
             }
           }
         }
-      }
-    }
+//      }
+//    }
 
     InputVector keyVector = null;
       if (cohortField.isSetField()) {
@@ -230,6 +331,21 @@ public class CohortAggregation implements Operator {
         }
       }
     }
+//<<<<<<< HEAD
     return Math.min(pos, end);
   }
+//=======
+
+    private int seekToReuseBirthTuple(int begin, int end, List<BitSet> bitSetList) {
+        int pos = begin;
+
+        for (BitSet bitSet : bitSetList) {
+            int newPos = bitSet.nextSetBit(pos);
+            if(newPos == -1 || newPos >= end)
+                return end;
+            pos = newPos;
+        }
+        return pos;
+    }
+//>>>>>>> Add seekToReuseBirthTuple()
 }
