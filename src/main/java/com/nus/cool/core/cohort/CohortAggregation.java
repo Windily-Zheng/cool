@@ -191,28 +191,33 @@ public class CohortAggregation implements Operator {
                     int begin = userBlock.off;
                     int end = userBlock.off + userBlock.len;
 
+                    InputVector actionInput = actionField.getValueVector();
+                    actionInput.skipTo(begin);
+
                     boolean reuse = true;
                     int birthOff;
 
                     if (reuse) {
-                        List<BitSet> bitSetList = Lists.newArrayList();
+//                        List<BitSet> bitSetList = Lists.newArrayList();
+//
+//                        BitSet bitSet1 = new BitSet(10000);
+//                        for(int i=20; i<10000; i+=1314)
+//                            bitSet1.set(i);
+//                        bitSetList.add(bitSet1);
+//
+//                        BitSet bitSet2 = new BitSet(10000);
+//                        for(int i=55; i<10000; i+=523)
+//                            bitSet2.set(i);
+//                        bitSetList.add(bitSet2);
+//
+//                        BitSet bitSet3 = new BitSet(10000);
+//                        for(int i=99; i<10000; i+=520)
+//                            bitSet3.set(i);
+//                        bitSetList.add(bitSet3);
 
-                        BitSet bitSet1 = new BitSet(10000);
-                        for(int i=20; i<10000; i+=1314)
-                            bitSet1.set(i);
-                        bitSetList.add(bitSet1);
-
-                        BitSet bitSet2 = new BitSet(10000);
-                        for(int i=55; i<10000; i+=523)
-                            bitSet2.set(i);
-                        bitSetList.add(bitSet2);
-
-                        BitSet bitSet3 = new BitSet(10000);
-                        for(int i=99; i<10000; i+=520)
-                            bitSet3.set(i);
-                        bitSetList.add(bitSet3);
-
+                        List<BitSet> bitSetList = reuseAndCaching(actionInput);
                         birthOff = seekToReuseBirthTuple(begin, end, bitSetList);
+
                         System.out.println("begin: " + begin);
                         System.out.println("end: " + end);
                         System.out.println("birthOff: " + birthOff);
@@ -220,8 +225,6 @@ public class CohortAggregation implements Operator {
 
                     }
                     else {
-                        InputVector actionInput = actionField.getValueVector();
-                        actionInput.skipTo(begin);
                         birthOff = seekToBirthTuple(begin, end, actionInput);
                     }
 
@@ -336,12 +339,60 @@ public class CohortAggregation implements Operator {
   }
 //=======
 
+    private List<BitSet> reuseAndCaching(InputVector actionInput) {
+        Map<Integer, BitSet> cachedBitsets = Maps.newTreeMap();
+        Map<Integer, BitSet> toCacheBitsets = Maps.newTreeMap();
+
+        // Load cached bitsets
+//        BitSet bitSet1 = new BitSet(actionInput.size());
+//        for(int i=20; i<actionInput.size(); i+=1314)
+//            bitSet1.set(i);
+//        cachedBitsets.put(this.bBirthActionChunkIDs[0], bitSet1);
+
+        // Check missed localIDs
+        for (int id : this.bBirthActionChunkIDs) {
+            if(!cachedBitsets.containsKey(id)) {
+                BitSet bitSet = new BitSet(actionInput.size());
+                toCacheBitsets.put(id, bitSet);
+            }
+        }
+
+        // Traverse actionInput to get missed bitsets
+        int pos = 0;
+        actionInput.skipTo(pos);
+        while (actionInput.hasNext()) {
+            int key = actionInput.next();
+            if (toCacheBitsets.containsKey(key)) {
+                toCacheBitsets.get(key).set(pos);
+            }
+            pos++;
+        }
+
+        // Caching bitsets
+
+        // Merge BitSets
+        List<BitSet> bitSetList = Lists.newArrayList();
+        for (int id : this.bBirthActionChunkIDs) {
+            if(cachedBitsets.containsKey(id)) {
+                bitSetList.add(cachedBitsets.get(id));
+            }
+            else if (toCacheBitsets.containsKey(id))
+            {
+                bitSetList.add(toCacheBitsets.get(id));
+            }
+            else {
+                System.out.println("Bitset of localID " + id + " is not found!");
+            }
+        }
+        return bitSetList;
+    }
+
     private int seekToReuseBirthTuple(int begin, int end, List<BitSet> bitSetList) {
         int pos = begin;
 
         for (BitSet bitSet : bitSetList) {
             int newPos = bitSet.nextSetBit(pos);
-            if(newPos == -1 || newPos >= end)
+            if (newPos == -1 || newPos >= end)
                 return end;
             pos = newPos;
         }
