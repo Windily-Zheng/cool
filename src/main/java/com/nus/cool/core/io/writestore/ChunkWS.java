@@ -45,10 +45,11 @@ import java.util.List;
  * <p>
  * chunk header layout
  * ---------------------------------------------------
- * | chunk type | #records | #fields | field offsets |
+ * | chunk type | chunk ID | #records | #fields | field offsets |
  * ---------------------------------------------------
  * where
  * ChunkType == ChunkType.DATA
+ * chunk ID == identifier of a chunk (unique in a cublet)
  * #records == number of records
  * #fields == number of fields
  *
@@ -68,49 +69,99 @@ public class ChunkWS implements Output {
    */
   private int count;
 
-  /**
-   * Fields in data chunk
-   */
-  private FieldWS[] fields;
+//<<<<<<< HEAD
+//  /**
+//   * Fields in data chunk
+//   */
+//  private FieldWS[] fields;
+//
+//  /**
+//   * Create a chunk instance
+//   *
+//   * @param offset Offset in out stream
+//   * @param fields fields for this data chunk
+//   */
+//  public ChunkWS(int offset, FieldWS[] fields) {
+//    this.fields = checkNotNull(fields);
+//    checkArgument(offset > 0 && fields.length > 0);
+//    this.offset = offset;
+//  }
+//
+//  public static ChunkWS newChunk(TableSchema schema, MetaFieldWS[] metaFields, int offset) {
+//    OutputCompressor compressor = new OutputCompressor();
+//    List<FieldSchema> fieldSchemaList = schema.getFields();
+//    FieldWS[] fields = new FieldWS[fieldSchemaList.size()];
+//    int i = 0;
+//    for (FieldSchema fieldSchema : fieldSchemaList) {
+//      FieldType fieldType = fieldSchema.getFieldType();
+//      switch (fieldType) {
+//        case AppKey:
+//        case UserKey:
+//        case Action:
+//        case Segment:
+//          fields[i] = new HashFieldWS(fieldType, i, metaFields[i], compressor,
+//              fieldSchema.isPreCal());
+//          break;
+//        case ActionTime:
+//        case Metric:
+//          fields[i] = new RangeFieldWS(fieldType, i, compressor);
+//          break;
+//        default:
+//          throw new IllegalArgumentException("Unsupported FieldType: " + fieldType);
+//      }
+//      i++;
+//=======
+    /**
+     * Identifier of a chunk (unique in a cublet)
+     */
+    private int chunkID;
 
-  /**
-   * Create a chunk instance
-   *
-   * @param offset Offset in out stream
-   * @param fields fields for this data chunk
-   */
-  public ChunkWS(int offset, FieldWS[] fields) {
-    this.fields = checkNotNull(fields);
-    checkArgument(offset > 0 && fields.length > 0);
-    this.offset = offset;
-  }
+    /**
+     * Fields in data chunk
+     */
+    private FieldWS[] fields;
 
-  public static ChunkWS newChunk(TableSchema schema, MetaFieldWS[] metaFields, int offset) {
-    OutputCompressor compressor = new OutputCompressor();
-    List<FieldSchema> fieldSchemaList = schema.getFields();
-    FieldWS[] fields = new FieldWS[fieldSchemaList.size()];
-    int i = 0;
-    for (FieldSchema fieldSchema : fieldSchemaList) {
-      FieldType fieldType = fieldSchema.getFieldType();
-      switch (fieldType) {
-        case AppKey:
-        case UserKey:
-        case Action:
-        case Segment:
-          fields[i] = new HashFieldWS(fieldType, i, metaFields[i], compressor,
-              fieldSchema.isPreCal());
-          break;
-        case ActionTime:
-        case Metric:
-          fields[i] = new RangeFieldWS(fieldType, i, compressor);
-          break;
-        default:
-          throw new IllegalArgumentException("Unsupported FieldType: " + fieldType);
-      }
-      i++;
+    /**
+     * Create a chunk instance
+     *
+     * @param offset Offset in out stream
+     * @param fields fields for this data chunk
+     */
+    public ChunkWS(int offset, FieldWS[] fields, int chunkID) {
+        this.fields = checkNotNull(fields);
+        checkArgument(offset > 0 && fields.length > 0);
+        this.offset = offset;
+        this.chunkID = chunkID;
     }
-    return new ChunkWS(offset, fields);
-  }
+
+    public static ChunkWS newChunk(TableSchema schema, MetaFieldWS[] metaFields, int offset, int chunkID) {
+        OutputCompressor compressor = new OutputCompressor();
+        List<FieldSchema> fieldSchemaList = schema.getFields();
+        FieldWS[] fields = new FieldWS[fieldSchemaList.size()];
+        int i = 0;
+        for (FieldSchema fieldSchema : fieldSchemaList) {
+            FieldType fieldType = fieldSchema.getFieldType();
+            switch (fieldType) {
+                case AppKey:
+                case UserKey:
+                case Action:
+                case Segment:
+                    fields[i] = new HashFieldWS(fieldType, i, metaFields[i], compressor, fieldSchema.isPreCal());
+                    break;
+                case ActionTime:
+                case Metric:
+                    fields[i] = new RangeFieldWS(fieldType, i, compressor);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported FieldType: " + fieldType);
+            }
+            i++;
+        }
+        return new ChunkWS(offset, fields, chunkID);
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
+    }
+//    return new ChunkWS(offset, fields);
+//  }
 
   /**
    * Put a tuple into the chunk
@@ -137,29 +188,58 @@ public class ChunkWS implements Output {
     int bytesWritten = 0;
     int[] offsets = new int[this.fields.length];
 
+//<<<<<<< HEAD
     // Calculate offset of field
     // Write field
-    for (int i = 0; i < this.fields.length; i++) {
-      offsets[i] = this.offset + bytesWritten;
-      bytesWritten += this.fields[i].writeTo(out);
-    }
+//    for (int i = 0; i < this.fields.length; i++) {
+//      offsets[i] = this.offset + bytesWritten;
+//      bytesWritten += this.fields[i].writeTo(out);
+//    }
+//=======
+        // Calculate offset of field
+        // Write field
+        for (int i = 0; i < this.fields.length; i++) {
+            offsets[i] = this.offset + bytesWritten;
+            bytesWritten += this.fields[i].writeTo(out);
+        }
 
-    // Calculate offset of header
-    int chunkHeadOff = this.offset + bytesWritten;
-    // Write chunkType (DATA)
-    out.write(ChunkType.DATA.ordinal());
-    bytesWritten++;
-    // Write #records
-    out.writeInt(IntegerUtil.toNativeByteOrder(this.count));
-    bytesWritten += Ints.BYTES;
-    // Write #fields
-    out.writeInt(IntegerUtil.toNativeByteOrder(this.fields.length));
-    bytesWritten += Ints.BYTES;
-    // Write field offsets
-    for (int offset : offsets) {
-      out.writeInt(IntegerUtil.toNativeByteOrder(offset));
-      bytesWritten += Ints.BYTES;
-    }
+        // Calculate offset of header
+        int chunkHeadOff = this.offset + bytesWritten;
+        // Write chunkType (DATA)
+        out.write(ChunkType.DATA.ordinal());
+        bytesWritten++;
+        // Write chunkID
+        out.writeInt(IntegerUtil.toNativeByteOrder(this.chunkID));
+        bytesWritten += Ints.BYTES;
+        // Write #records
+        out.writeInt(IntegerUtil.toNativeByteOrder(this.count));
+        bytesWritten += Ints.BYTES;
+        // Write #fields
+        out.writeInt(IntegerUtil.toNativeByteOrder(this.fields.length));
+        bytesWritten += Ints.BYTES;
+        // Write field offsets
+        for (int offset : offsets) {
+            out.writeInt(IntegerUtil.toNativeByteOrder(offset));
+            bytesWritten += Ints.BYTES;
+        }
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
+
+//    // Calculate offset of header
+//    int chunkHeadOff = this.offset + bytesWritten;
+//    // Write chunkType (DATA)
+//    out.write(ChunkType.DATA.ordinal());
+//    bytesWritten++;
+//    // Write #records
+//    out.writeInt(IntegerUtil.toNativeByteOrder(this.count));
+//    bytesWritten += Ints.BYTES;
+//    // Write #fields
+//    out.writeInt(IntegerUtil.toNativeByteOrder(this.fields.length));
+//    bytesWritten += Ints.BYTES;
+//    // Write field offsets
+//    for (int offset : offsets) {
+//      out.writeInt(IntegerUtil.toNativeByteOrder(offset));
+//      bytesWritten += Ints.BYTES;
+//    }
 
     // Write header offset
     out.writeInt(IntegerUtil.toNativeByteOrder(chunkHeadOff));

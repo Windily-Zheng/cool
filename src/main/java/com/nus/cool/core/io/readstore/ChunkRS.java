@@ -36,10 +36,11 @@ import lombok.Getter;
  * <p>
  * chunk header layout
  * ---------------------------------------------------
- * | chunk type | #records | #fields | field offsets |
+ * | chunk type | chunk ID | #records | #fields | field offsets |
  * ---------------------------------------------------
  * where
  * ChunkType == ChunkType.DATA
+ * chunk ID == identifier of a chunk (unique in a cublet)
  * #records == number of records
  * #fields == number of fields
  *
@@ -49,11 +50,25 @@ import lombok.Getter;
  */
 public class ChunkRS implements Input {
 
+//<<<<<<< HEAD
   /**
    * number of record in this chunk
    */
   @Getter
   private int records;
+//=======
+    /**
+     * identifier of a chunk (unique in a cublet)
+     */
+    @Getter
+    private int chunkID;
+
+    /**
+     * number of record in this chunk
+     */
+    @Getter
+    private int records;
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
 
   /**
    * field array in this chunk
@@ -70,19 +85,32 @@ public class ChunkRS implements Input {
   public void readFrom(ByteBuffer buffer) {
     // Get chunkType
     ChunkType chunkType = ChunkType.fromInteger(buffer.get());
-    if (chunkType != ChunkType.DATA) {
-      throw new IllegalStateException("Expect DataChunk, but reads: " + chunkType);
-    }
+      if (chunkType != ChunkType.DATA) {
+          throw new IllegalStateException("Expect DataChunk, but reads: " + chunkType);
+      }
 
-    // Get #records
-    this.records = buffer.getInt();
-    // Get #fields
-    int fields = buffer.getInt();
-    // Get field offsets
-    int[] fieldOffsets = new int[fields];
-    for (int i = 0; i < fields; i++) {
-      fieldOffsets[i] = buffer.getInt();
-    }
+//<<<<<<< HEAD
+//    // Get #records
+//    this.records = buffer.getInt();
+//    // Get #fields
+//    int fields = buffer.getInt();
+//    // Get field offsets
+//    int[] fieldOffsets = new int[fields];
+//      for (int i = 0; i < fields; i++) {
+//          fieldOffsets[i] = buffer.getInt();
+//      }
+//=======
+        // Get chunk ID
+        this.chunkID = buffer.getInt();
+        // Get #records
+        this.records = buffer.getInt();
+        // Get #fields
+        int fields = buffer.getInt();
+        // Get field offsets
+        int[] fieldOffsets = new int[fields];
+        for (int i = 0; i < fields; i++)
+            fieldOffsets[i] = buffer.getInt();
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
 
     this.fields = new FieldRS[fields];
     for (int i = 0; i < fields; i++) {
@@ -95,9 +123,5 @@ public class ChunkRS implements Input {
 
   public FieldRS getField(int i) {
     return this.fields[i];
-  }
-
-  public FieldRS getField(String fieldName) {
-    return getField(this.schema.getFieldID(fieldName));
   }
 }

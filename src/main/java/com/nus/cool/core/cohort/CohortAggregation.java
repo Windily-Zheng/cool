@@ -218,6 +218,7 @@ public class CohortAggregation implements Operator {
                         List<BitSet> bitSetList = reuseAndCaching(actionInput);
                         birthOff = seekToReuseBirthTuple(begin, end, bitSetList);
 
+                        System.out.println("chunk id: " + chunk.getChunkID());
                         System.out.println("begin: " + begin);
                         System.out.println("end: " + end);
                         System.out.println("birthOff: " + birthOff);
@@ -252,34 +253,34 @@ public class CohortAggregation implements Operator {
 //>>>>>>> Add seekToReuseBirthTuple()
             }
 
-          int begin = userBlock.off;
-          int end = userBlock.off + userBlock.len;
-          InputVector actionInput = actionField.getValueVector();
-          actionInput.skipTo(begin);
-          int birthOff = seekToBirthTuple(begin, end, actionInput);
-          if (birthOff == end) {
-            continue;
-          }
-
-          if (this.sigma.selectUser(birthOff)) {
-            this.bs.set(begin, end);
-            cohortInput.skipTo(birthOff);
-            int cohort = cohortInput.next() - min;
-            chunkResults[cohort][0]++;
-            actionTimeInput.skipTo(birthOff);
-            int birthTime = actionTimeInput.next();
-            int ageOff = birthOff + 1;
-            if (ageOff < end) {
-              bv.set(birthOff + 1, end);
-              this.sigma.selectAgeActivities(birthOff + 1, end, bv);
-                if (!bv.isEmpty()) {
-                    aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
-                }
-              bv.clear(birthOff + 1, end);
-            }
-          }
-        }
-//      }
+//          int begin = userBlock.off;
+//          int end = userBlock.off + userBlock.len;
+//          InputVector actionInput = actionField.getValueVector();
+//          actionInput.skipTo(begin);
+//          int birthOff = seekToBirthTuple(begin, end, actionInput);
+//          if (birthOff == end) {
+//            continue;
+//          }
+//
+//          if (this.sigma.selectUser(birthOff)) {
+//            this.bs.set(begin, end);
+//            cohortInput.skipTo(birthOff);
+//            int cohort = cohortInput.next() - min;
+//            chunkResults[cohort][0]++;
+//            actionTimeInput.skipTo(birthOff);
+//            int birthTime = actionTimeInput.next();
+//            int ageOff = birthOff + 1;
+//            if (ageOff < end) {
+//              bv.set(birthOff + 1, end);
+//              this.sigma.selectAgeActivities(birthOff + 1, end, bv);
+//                if (!bv.isEmpty()) {
+//                    aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
+//                }
+//              bv.clear(birthOff + 1, end);
+//            }
+//          }
+//        }
+      }
 //    }
 
     InputVector keyVector = null;
