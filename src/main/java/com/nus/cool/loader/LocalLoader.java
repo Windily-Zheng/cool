@@ -25,10 +25,15 @@ import com.nus.cool.core.util.parser.CsvTupleParser;
 import com.nus.cool.core.util.parser.TupleParser;
 import com.nus.cool.core.util.reader.LineTupleReader;
 import com.nus.cool.core.util.reader.TupleReader;
+//<<<<<<< HEAD
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+//=======
+
+import java.io.*;
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
 import java.util.List;
 
 /**
@@ -43,39 +48,85 @@ public class LocalLoader {
 
   private static List<Integer> chunkOffsets = Lists.newArrayList();
 
-  public static void load(TableSchema tableSchema, File dimensionFile, File dataFile,
-      File outputDir, int chunkSize) throws IOException {
-    TupleParser parser = new CsvTupleParser();
-    MetaChunkWS metaChunk = newMetaChunk(dimensionFile, tableSchema, parser);
-    DataOutputStream out = newCublet(outputDir, metaChunk);
-    int userKeyIndex = tableSchema.getUserKeyField();
-    String lastUser = null;
-    try (TupleReader reader = new LineTupleReader(dataFile)) {
-      int tuples = 0;
-      ChunkWS chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset);
-      while (reader.hasNext()) {
-        String line = (String) reader.next();
-        String[] tuple = parser.parse(line);
-        String curUser = tuple[userKeyIndex];
-          if (lastUser == null) {
-              lastUser = curUser;
-          }
-        if (!curUser.equals(lastUser)) {
-          lastUser = curUser;
-          if (tuples >= chunkSize) {
-            offset += chunk.writeTo(out);
-            chunkOffsets.add(offset - Ints.BYTES);
-            if (offset >= (1 << 30)) {
-              closeCublet(out);
-              out = newCublet(outputDir, metaChunk);
+  public static void main(String[] args) throws IOException {
+    File cubeRoot = new File(args[0]);
+    TableSchema schema = TableSchema.read(new FileInputStream(new File(cubeRoot, "table.yaml")));
+    File dimensionFile = new File(cubeRoot, "dim_test.csv");
+    File dataFile = new File(cubeRoot, "test.csv");
+    File outputDir = new File(cubeRoot, args[1]);
+    int chunkSize = 3000;
+
+    load(schema, dimensionFile, dataFile, outputDir, chunkSize);
+  }
+
+//<<<<<<< HEAD
+//  public static void load(TableSchema tableSchema, File dimensionFile, File dataFile,
+//      File outputDir, int chunkSize) throws IOException {
+//    TupleParser parser = new CsvTupleParser();
+//    MetaChunkWS metaChunk = newMetaChunk(dimensionFile, tableSchema, parser);
+//    DataOutputStream out = newCublet(outputDir, metaChunk);
+//    int userKeyIndex = tableSchema.getUserKeyField();
+//    String lastUser = null;
+//    try (TupleReader reader = new LineTupleReader(dataFile)) {
+//      int tuples = 0;
+//      ChunkWS chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset);
+//      while (reader.hasNext()) {
+//        String line = (String) reader.next();
+//        String[] tuple = parser.parse(line);
+//        String curUser = tuple[userKeyIndex];
+//          if (lastUser == null) {
+//              lastUser = curUser;
+//          }
+//        if (!curUser.equals(lastUser)) {
+//          lastUser = curUser;
+//          if (tuples >= chunkSize) {
+//=======
+
+    public static void load(TableSchema tableSchema, File dimensionFile, File dataFile, File outputDir, int chunkSize) throws IOException {
+        TupleParser parser = new CsvTupleParser();
+        MetaChunkWS metaChunk = newMetaChunk(dimensionFile, tableSchema, parser);
+        DataOutputStream out = newCublet(outputDir, metaChunk);
+        int userKeyIndex = tableSchema.getUserKeyField();
+        String lastUser = null;
+        try (TupleReader reader = new LineTupleReader(dataFile)) {
+            int tuples = 0;
+            ChunkWS chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size()-1);
+            while (reader.hasNext()) {
+                String line = (String) reader.next();
+                String[] tuple = parser.parse(line);
+                String curUser = tuple[userKeyIndex];
+                if (lastUser == null)
+                    lastUser = curUser;
+                if (!curUser.equals(lastUser)) {
+                    lastUser = curUser;
+                    if (tuples >= chunkSize) {
+                        offset += chunk.writeTo(out);
+                        chunkOffsets.add(offset - Ints.BYTES);
+                        if (offset >= (1 << 30)) {
+                            closeCublet(out);
+                            out = newCublet(outputDir, metaChunk);
+                        }
+                        chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size()-1);
+                        tuples = 0;
+                    }
+                }
+                chunk.put(tuple);
+                tuples++;
             }
-            chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset);
-            tuples = 0;
-          }
-        }
-        chunk.put(tuple);
-        tuples++;
-      }
+//>>>>>>> Add chunk ID; Add main() in LocalLoader
+//            offset += chunk.writeTo(out);
+//            chunkOffsets.add(offset - Ints.BYTES);
+//            if (offset >= (1 << 30)) {
+//              closeCublet(out);
+//              out = newCublet(outputDir, metaChunk);
+//            }
+//            chunk = ChunkWS.newChunk(tableSchema, metaChunk.getMetaFields(), offset);
+//            tuples = 0;
+//          }
+//        }
+//        chunk.put(tuple);
+//        tuples++;
+//      }
       offset += chunk.writeTo(out);
       chunkOffsets.add(offset - Ints.BYTES);
       closeCublet(out);
