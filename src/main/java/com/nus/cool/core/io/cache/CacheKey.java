@@ -19,6 +19,14 @@ public class CacheKey {
     this.localID = localID;
   }
 
+  public CacheKey(String cacheFileName) {
+    String fileName = cacheFileName.substring(0, cacheFileName.length() - 3);
+    String[] s = fileName.split("_");
+    this.cubletFileName = s[0];
+    this.chunkID = Integer.parseInt(s[1]);
+    this.localID = Integer.parseInt(s[2]);
+  }
+
   public String getFileName() {
     return cubletFileName + "_" + chunkID + "_" + localID + ".dz";
   }

@@ -103,57 +103,6 @@ public class CohortSelection implements Operator {
     for (Map.Entry<String, FieldFilter> entry : this.birthFilters.entrySet()) {
       MetaFieldRS metaField = metaChunk.getMetaField(entry.getKey());
       this.bUserActiveCublet &= entry.getValue().accept(metaField);
-//<<<<<<< HEAD
-//    }
-//
-//    for (Map.Entry<String, FieldFilter> entry : this.ageFilters.entrySet()) {
-//      MetaFieldRS metaField = metaChunk.getMetaField(entry.getKey());
-//      this.bAgeActiveCublet &= entry.getValue().accept(metaField);
-//    }
-//  }
-//
-//  @Override
-//  public void process(ChunkRS chunk) {
-//    this.birthFilterFields.clear();
-//    this.ageFilterFields.clear();
-//    this.bUserActiveChunk = true;
-//    this.bAgeActiveChunk = true;
-//
-//    boolean bAccept = this.appFilter.accept(chunk.getField(this.schema.getAppKeyField()));
-//    if (!bAccept) {
-//      this.bUserActiveChunk = false;
-//      return;
-//    }
-//
-//    for (Map.Entry<String, FieldFilter> entry : this.birthFilters.entrySet()) {
-//      FieldRS field = chunk.getField(this.schema.getFieldID(entry.getKey()));
-//      this.bUserActiveChunk &= entry.getValue().accept(field);
-//      this.birthFilterFields.put(entry.getKey(), field);
-//    }
-//
-//    for (Map.Entry<String, FieldFilter> entry : this.ageFilters.entrySet()) {
-//      FieldRS field = chunk.getField(this.schema.getFieldID(entry.getKey()));
-//      this.bAgeActiveChunk &= entry.getValue().accept(field);
-//      this.ageFilterFields.put(entry.getKey(), field);
-//    }
-//  }
-//
-//  public FieldFilter getBirthFieldFilter(String fieldName) {
-//    return this.birthFilters.get(fieldName);
-//  }
-//
-//  public boolean selectUser(int birthOff) {
-//    boolean bSelected = true;
-//    for (Map.Entry<String, FieldFilter> entry : this.birthFilters.entrySet()) {
-//      FieldRS field = this.birthFilterFields.get(entry.getKey());
-//      InputVector fieldInput = field.getValueVector();
-//      fieldInput.skipTo(birthOff);
-//      bSelected = entry.getValue().accept(fieldInput.next());
-//        if (!bSelected) {
-//            break;
-//        }
-//    }
-//=======
     }
 
     for (Map.Entry<String, FieldFilter> entry : this.ageFilters.entrySet()) {
@@ -163,7 +112,8 @@ public class CohortSelection implements Operator {
   }
 
   @Override
-  public void process(ChunkRS chunk, CacheManager cacheManager, String cubletFileName) {
+  public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager,
+      String cubletFileName) {
     this.birthFilterFields.clear();
     this.ageFilterFields.clear();
     this.bUserActiveChunk = true;
@@ -203,7 +153,6 @@ public class CohortSelection implements Operator {
         break;
       }
     }
-//>>>>>>> Implement disk cache(load & put); Add Controller & Processor
     return bSelected;
   }
 
@@ -215,29 +164,17 @@ public class CohortSelection implements Operator {
       FieldFilter ageFilter = entry.getValue();
       if ((bs.cardinality() << 1) >= (ageEnd - ageOff)) {
         for (int i = ageOff; i < ageEnd; i++) {
-//<<<<<<< HEAD
-//            if (!ageFilter.accept(fieldInput.next())) {
-//                bs.clear(i);
-//            }
-//=======
           if (!ageFilter.accept(fieldInput.next())) {
             bs.clear(i);
           }
-//>>>>>>> Implement disk cache(load & put); Add Controller & Processor
         }
       } else {
         int off = bs.nextSetBit(ageOff);
         while (off < ageEnd && off >= 0) {
           fieldInput.skipTo(off);
-//<<<<<<< HEAD
-//            if (!ageFilter.accept(fieldInput.next())) {
-//                bs.clear(off);
-//            }
-//=======
           if (!ageFilter.accept(fieldInput.next())) {
             bs.clear(off);
           }
-//>>>>>>> Implement disk cache(load & put); Add Controller & Processor
           off = bs.nextSetBit(off + 1);
         }
       }

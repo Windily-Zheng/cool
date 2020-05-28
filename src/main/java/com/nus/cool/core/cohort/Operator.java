@@ -32,9 +32,6 @@ public interface Operator extends Cloneable {
 
   void process(MetaChunkRS metaChunk);
 
-//<<<<<<< HEAD
-//  void process(ChunkRS chunk);
-//=======
-  void process(ChunkRS chunk, CacheManager cacheManager, String cubletFileName) throws IOException;
-//>>>>>>> Implement disk cache(load & put); Add Controller & Processor
+  void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager, String cubletFileName)
+      throws IOException;
 }
