@@ -10,8 +10,8 @@ public class CacheManager {
 
   private static DiskStore diskStore;
 
-  public CacheManager(String path) {
-    diskStore = new DiskStore(path);
+  public CacheManager(String cacheRoot, int diskCacheSize, double entryCacheLimit) {
+    diskStore = new DiskStore(cacheRoot, diskCacheSize, entryCacheLimit);
   }
 
   public void put(CacheKey cacheKey, BitSet bitSet) throws IOException {
