@@ -15,9 +15,11 @@
  */
 package com.nus.cool.core.cohort;
 
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
 import com.nus.cool.core.io.readstore.MetaChunkRS;
 import com.nus.cool.core.schema.TableSchema;
+import java.io.IOException;
 
 /**
  * @author zhongle, hongbin
@@ -30,5 +32,9 @@ public interface Operator extends Cloneable {
 
   void process(MetaChunkRS metaChunk);
 
-  void process(ChunkRS chunk);
+//<<<<<<< HEAD
+//  void process(ChunkRS chunk);
+//=======
+  void process(ChunkRS chunk, CacheManager cacheManager, String cubletFileName) throws IOException;
+//>>>>>>> Implement disk cache(load & put); Add Controller & Processor
 }
