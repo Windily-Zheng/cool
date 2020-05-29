@@ -34,6 +34,7 @@ import com.nus.cool.core.io.storevector.RLEInputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import lombok.Getter;
 import java.util.BitSet;
@@ -140,55 +141,57 @@ public class CohortAggregation implements Operator {
     this.bs = new BitSet(chunk.getRecords());
 
     // Load chunk cache
-    List<CacheKey> cacheKeys = Lists.newArrayList();
-    for (int i = 0; i < this.bBirthActionChunkIDs.length; i++) {
-      CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(),
-          this.bBirthActionChunkIDs[i]);
-      cacheKeys.add(cacheKey);
-    }
-
-    System.out.println("Chunk ID: " + chunk.getChunkID());
-    System.out.println("*** Loading missing Bitsets ***");
-
-    Map<Integer, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
-
-    System.out.println("Load " + cachedBitsets.size() + " Bitsets");
-    if (!cachedBitsets.isEmpty()) {
-      System.out.println("Local IDs:");
-      for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
-        System.out.println(entry.getKey());
+    Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+    if (reuse) {
+      List<CacheKey> cacheKeys = Lists.newArrayList();
+      for (int i = 0; i < this.bBirthActionChunkIDs.length; i++) {
+        CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(),
+            this.bBirthActionChunkIDs[i]);
+        cacheKeys.add(cacheKey);
       }
-    }
 
-    // Caching missing Bitsets
-    if (cachedBitsets.size() < this.bBirthActionChunkIDs.length) {
-      System.out.println("*** Caching missing Bitsets ***");
-      Map<Integer, BitSet> toCacheBitsets = new LinkedHashMap<>();
-      // Check missed localIDs
-      for (int id : this.bBirthActionChunkIDs) {
-        if (!cachedBitsets.containsKey(id)) {
-          BitSet bitSet = new BitSet(chunk.getRecords());
-          toCacheBitsets.put(id, bitSet);
-          System.out.println("Missing local ID: " + id);
+//      System.out.println("Chunk ID: " + chunk.getChunkID());
+//      System.out.println("*** Loading missing Bitsets ***");
+      cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+
+//      System.out.println("Load " + cachedBitsets.size() + " Bitsets");
+      if (!cachedBitsets.isEmpty()) {
+//        System.out.println("Local IDs:");
+        for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
+//          System.out.println(entry.getKey());
         }
       }
 
-      // Traverse actionInput to get missed Bitsets
-      int pos = 0;
-      actionInput.skipTo(pos);
-      while (actionInput.hasNext()) {
-        int key = actionInput.next();
-        if (toCacheBitsets.containsKey(key)) {
-          toCacheBitsets.get(key).set(pos);
+      // Caching missing Bitsets
+      if (cachedBitsets.size() < this.bBirthActionChunkIDs.length) {
+//        System.out.println("*** Caching missing Bitsets ***");
+        Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
+        // Check missed localIDs
+        for (int id : this.bBirthActionChunkIDs) {
+          if (!cachedBitsets.containsKey(id)) {
+            BitSet bitSet = new BitSet(chunk.getRecords());
+            toCacheBitsets.put(id, bitSet);
+//            System.out.println("Missing local ID: " + id);
+          }
         }
-        pos++;
-      }
 
-      // Caching bitsets
-      for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
-        CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), entry.getKey());
-        cacheManager.put(cacheKey, entry.getValue(), storageLevel);
-        cachedBitsets.put(entry.getKey(), entry.getValue());
+        // Traverse actionInput to get missed Bitsets
+        int pos = 0;
+        actionInput.skipTo(pos);
+        while (actionInput.hasNext()) {
+          int key = actionInput.next();
+          if (toCacheBitsets.containsKey(key)) {
+            toCacheBitsets.get(key).set(pos);
+          }
+          pos++;
+        }
+
+        // Caching bitsets
+        for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
+          CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), entry.getKey());
+          cacheManager.put(cacheKey, entry.getValue(), storageLevel);
+          cachedBitsets.put(entry.getKey(), entry.getValue());
+        }
       }
     }
 
@@ -219,10 +222,10 @@ public class CohortAggregation implements Operator {
 
           if (reuse) {
             birthOff = seekToReuseBirthTuple(begin, end, cachedBitsets);
-            System.out.println("begin: " + begin);
-            System.out.println("end: " + end);
-            System.out.println("birthOff: " + birthOff);
-            System.out.println();
+//            System.out.println("begin: " + begin);
+//            System.out.println("end: " + end);
+//            System.out.println("birthOff: " + birthOff);
+//            System.out.println();
           } else {
             birthOff = seekToBirthTuple(begin, end, actionInput);
           }
