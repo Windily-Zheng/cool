@@ -95,10 +95,9 @@ public class CohortAggregation implements Operator {
   }
 
   @Override
-  public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager,
-      String cubletFileName)
-      throws IOException {
-    this.sigma.process(chunk, reuse, cacheManager, cubletFileName);
+  public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager, String storageLevel,
+      String cubletFileName) throws IOException {
+    this.sigma.process(chunk, reuse, cacheManager, storageLevel, cubletFileName);
     if (!this.sigma.isBUserActiveChunk()) {
       return;
     }
@@ -151,7 +150,7 @@ public class CohortAggregation implements Operator {
     System.out.println("Chunk ID: " + chunk.getChunkID());
     System.out.println("*** Loading missing Bitsets ***");
 
-    Map<Integer, BitSet> cachedBitsets = cacheManager.load(cacheKeys);
+    Map<Integer, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
 
     System.out.println("Load " + cachedBitsets.size() + " Bitsets");
     if (!cachedBitsets.isEmpty()) {
@@ -188,7 +187,7 @@ public class CohortAggregation implements Operator {
       // Caching bitsets
       for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
         CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), entry.getKey());
-        cacheManager.put(cacheKey, entry.getValue());
+        cacheManager.put(cacheKey, entry.getValue(), storageLevel);
         cachedBitsets.put(entry.getKey(), entry.getValue());
       }
     }

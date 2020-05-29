@@ -35,8 +35,12 @@ public class CohortProcessor {
         List<ChunkRS> dataChunks = cublet.getDataChunks();
         for (ChunkRS dataChunk : dataChunks) {
           String cubletFile = cublet.getFile();
+
+          // TODO: Need to get from query
           boolean reuse = true;
-          gamma.process(dataChunk, reuse, cacheManager,
+          String storageLevel = "MEMORY_ONLY";
+
+          gamma.process(dataChunk, reuse, cacheManager, storageLevel,
               cubletFile.substring(0, cubletFile.length() - 3));
           bitSets.add(gamma.getBs());
         }
