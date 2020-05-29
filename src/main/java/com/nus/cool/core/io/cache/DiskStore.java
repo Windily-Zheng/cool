@@ -80,11 +80,14 @@ public class DiskStore {
   public Map<Integer, BitSet> load(List<CacheKey> cacheKeys) throws IOException {
     Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
     for (CacheKey cacheKey : cacheKeys) {
-      File cacheFile = new File(cacheRoot, cacheKey.getFileName());
-      if (cacheFile.exists()) {
-        ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
-        BitSet bitSet = SimpleBitSetCompressor.read(buffer);
-        cachedBitsets.put(cacheKey.getLocalID(), bitSet);
+      if (blockSizes.containsKey(cacheKey)) {
+        blockSizes.get(cacheKey);
+        File cacheFile = new File(cacheRoot, cacheKey.getFileName());
+        if (cacheFile.exists()) {
+          ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
+          BitSet bitSet = SimpleBitSetCompressor.read(buffer);
+          cachedBitsets.put(cacheKey.getLocalID(), bitSet);
+        }
       }
     }
     return cachedBitsets;
