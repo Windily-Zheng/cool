@@ -23,7 +23,7 @@ public class CohortController {
 
     cohortLoader = new CohortLoader();
 
-    cacheManager = new CacheManager(args[0] + "/" + args[2], 2000, 3000, 0.6);
+    cacheManager = new CacheManager(args[0] + "/" + args[2], 2000, 2000, 0.8);
 
     cohortProcessor = new CohortProcessor();
 
