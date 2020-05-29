@@ -112,7 +112,7 @@ public class CohortSelection implements Operator {
   }
 
   @Override
-  public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager,
+  public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager, String storageLevel,
       String cubletFileName) {
     this.birthFilterFields.clear();
     this.ageFilterFields.clear();

@@ -33,6 +33,7 @@ public class DiskStore {
   private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
 
   public DiskStore(String path, int diskCacheSize, double entryCacheLimit) {
+    checkNotNull(path);
     this.cacheRoot = new File(path);
 
     if (diskCacheSize <= 0) {
@@ -126,8 +127,8 @@ public class DiskStore {
             .println("Evict file: " + cacheKey.getFileName() + " (size: " + entry.getValue() + ")");
         cacheFile.delete();
       }
-      it.remove();
       freeSize += entry.getValue();
+      it.remove();
       if (freeSize >= size) {
         break;
       }
