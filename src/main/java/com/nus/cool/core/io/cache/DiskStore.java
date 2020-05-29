@@ -48,13 +48,13 @@ public class DiskStore {
 
     this.usedDiskSize = 0;
 
-    System.out.println("diskCacheSize: " + this.diskCacheSize);
-    System.out.println("entryCacheLimit: " + this.entryCacheLimit);
-    System.out.println("*** Initialize disk cache ***");
+//    System.out.println("diskCacheSize: " + this.diskCacheSize);
+//    System.out.println("entryCacheLimit: " + this.entryCacheLimit);
+//    System.out.println("*** Initialize disk cache ***");
 
     init();
-    System.out.println("usedDiskSize: " + usedDiskSize);
-    System.out.println();
+//    System.out.println("usedDiskSize: " + usedDiskSize);
+//    System.out.println();
   }
 
   private void init() {
@@ -70,7 +70,7 @@ public class DiskStore {
       int blockSize = (int) cacheFile.length();
       blockSizes.put(cacheKey, blockSize);
       usedDiskSize += blockSize;
-      System.out.println("CacheKey(" + cacheKey.toString() + ") Size: " + blockSize);
+//      System.out.println("CacheKey(" + cacheKey.toString() + ") Size: " + blockSize);
     }
     if (usedDiskSize > diskCacheSize) {
       evict(usedDiskSize - diskCacheSize);
@@ -97,12 +97,12 @@ public class DiskStore {
     File cacheFile = new File(cacheRoot, cacheKey.getFileName());
     DataOutputStream out = new DataOutputStream(new FileOutputStream(cacheFile));
     int bytesWritten = SimpleBitSetCompressor.compress(bitSet, out);
-    System.out.println("bytesWritten: " + bytesWritten);
+//    System.out.println("bytesWritten: " + bytesWritten);
 
     if (bytesWritten >= entryCacheLimit) {
       cacheFile.delete();
-      System.out.println(
-          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached on disk!");
+//      System.out.println(
+//          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached on disk!");
       return;
     }
 
@@ -115,9 +115,9 @@ public class DiskStore {
   }
 
   private void evict(int size) {
-    System.out.println("*** Evicting ***");
-    System.out.println("usedDiskSize: " + usedDiskSize);
-    System.out.println("Space needed to free: " + size);
+//    System.out.println("*** Evicting ***");
+//    System.out.println("usedDiskSize: " + usedDiskSize);
+//    System.out.println("Space needed to free: " + size);
 
     int freeSize = 0;
     // LRU
@@ -126,8 +126,8 @@ public class DiskStore {
       CacheKey cacheKey = entry.getKey();
       File cacheFile = new File(cacheRoot, cacheKey.getFileName());
       if (cacheFile.exists()) {
-        System.out
-            .println("Evict file: " + cacheKey.getFileName() + " (size: " + entry.getValue() + ")");
+//        System.out
+//            .println("Evict file: " + cacheKey.getFileName() + " (size: " + entry.getValue() + ")");
         cacheFile.delete();
       }
       freeSize += entry.getValue();
@@ -138,7 +138,7 @@ public class DiskStore {
     }
     usedDiskSize -= freeSize;
 
-    System.out.println("Total free size: " + freeSize);
-    System.out.println();
+//    System.out.println("Total free size: " + freeSize);
+//    System.out.println();
   }
 }

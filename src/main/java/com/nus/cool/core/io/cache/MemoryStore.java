@@ -31,9 +31,9 @@ public class MemoryStore {
 
     this.usedMemorySize = 0;
 
-    System.out.println("memoryCacheSize: " + this.memoryCacheSize + " bits");
-    System.out.println("entryCacheLimit: " + this.entryCacheLimit + " bits");
-    System.out.println();
+//    System.out.println("memoryCacheSize: " + this.memoryCacheSize + " bits");
+//    System.out.println("entryCacheLimit: " + this.entryCacheLimit + " bits");
+//    System.out.println();
   }
 
   public Map<Integer, BitSet> load(List<CacheKey> cacheKeys) {
@@ -49,8 +49,8 @@ public class MemoryStore {
 
   public void put(CacheKey cacheKey, BitSet bitSet) {
     if (bitSet.size() >= entryCacheLimit) {
-      System.out.println(
-          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached in memory!");
+//      System.out.println(
+//          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached in memory!");
       return;
     }
 
@@ -61,23 +61,23 @@ public class MemoryStore {
     entries.put(cacheKey, bitSet);
     usedMemorySize += bitSet.size();
 
-    System.out.println(
-        "Caching Bitset: CacheKey(" + cacheKey.toString() + ") size: " + bitSet.size() + " bits");
-    System.out.println("usedMemorySize: " + usedMemorySize);
+//    System.out.println(
+//        "Caching Bitset: CacheKey(" + cacheKey.toString() + ") size: " + bitSet.size() + " bits");
+//    System.out.println("usedMemorySize: " + usedMemorySize);
   }
 
   private void evict(int size) {
-    System.out.println("*** Evicting ***");
-    System.out.println("Bits needed to free: " + size);
+//    System.out.println("*** Evicting ***");
+//    System.out.println("Bits needed to free: " + size);
 
     int freeSize = 0;
     // LRU
     for (Iterator<Entry<CacheKey, BitSet>> it = entries.entrySet().iterator(); it.hasNext(); ) {
       Map.Entry<CacheKey, BitSet> entry = it.next();
-      CacheKey cacheKey = entry.getKey();
-      System.out.println(
-          "Evict Bitset: CacheKey(" + cacheKey.toString() + ") size: " + entry.getValue().size()
-              + " bits");
+//      CacheKey cacheKey = entry.getKey();
+//      System.out.println(
+//          "Evict Bitset: CacheKey(" + cacheKey.toString() + ") size: " + entry.getValue().size()
+//              + " bits");
       freeSize += entry.getValue().size();
       it.remove();
       if (freeSize >= size) {
@@ -86,7 +86,7 @@ public class MemoryStore {
     }
     usedMemorySize -= freeSize;
 
-    System.out.println("Total free size: " + freeSize + " bits");
-    System.out.println();
+//    System.out.println("Total free size: " + freeSize + " bits");
+//    System.out.println();
   }
 }

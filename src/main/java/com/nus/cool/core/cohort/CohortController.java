@@ -23,7 +23,7 @@ public class CohortController {
 
     cohortLoader = new CohortLoader();
 
-    cacheManager = new CacheManager(args[0] + "/" + args[2], 2000, 2000, 0.8);
+    cacheManager = new CacheManager(args[0] + "/" + args[2], 3000, 5000, 0.8);
 
     cohortProcessor = new CohortProcessor();
 
@@ -52,12 +52,24 @@ public class CohortController {
 //      }
 //    }
 
+    long totalTime = 0;
+
     for (CohortQuery query : queries) {
+      long startTime = System.currentTimeMillis();
+
       List<ResultTuple> resultTuples = cohortProcessor
           .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
+
+      long endTime = System.currentTimeMillis();
+      long queryTime = endTime - startTime;
+      totalTime += queryTime;
+      System.out.println("response time: " + queryTime + "ms");
+
       QueryResult result = QueryResult.ok(resultTuples);
       System.out.println(result.toString());
     }
+
+    System.out.println("Total time: " + totalTime + "ms");
     coolModel.close();
   }
 
