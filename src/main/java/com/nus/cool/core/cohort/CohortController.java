@@ -23,7 +23,11 @@ public class CohortController {
 
     cohortLoader = new CohortLoader();
 
-    cacheManager = new CacheManager(args[0] + "/" + args[2], 3000, 5000, 0.8);
+    double memoryCacheSize = (double) 1 * 1024 * 1024 * 1024;
+    double diskCacheSize = (double) 10 * 1024 * 1024 * 1024;
+
+    cacheManager = new CacheManager(args[0] + "/" + args[2], memoryCacheSize, diskCacheSize,
+        0.8);
 
     cohortProcessor = new CohortProcessor();
 
@@ -52,25 +56,40 @@ public class CohortController {
 //      }
 //    }
 
-    long totalTime = 0;
+//    long totalTime = 0;
+//    int count = 0;
 
     for (CohortQuery query : queries) {
-      long startTime = System.currentTimeMillis();
+//      long startTime = System.currentTimeMillis();
+//      long startTime = System.nanoTime();
 
       List<ResultTuple> resultTuples = cohortProcessor
           .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
 
-      long endTime = System.currentTimeMillis();
-      long queryTime = endTime - startTime;
-      totalTime += queryTime;
-      System.out.println("response time: " + queryTime + "ms");
+//      long endTime = System.currentTimeMillis();
+//      long endTime = System.nanoTime();
+//      long queryTime = endTime - startTime;
+//      totalTime += queryTime;
+//      count++;
+//      System.out.println("Q[" + count + "]: " + queryTime + " ns");
+//      System.out.println("Q[" + count + "]: " + queryTime + " ms");
 
-      QueryResult result = QueryResult.ok(resultTuples);
-      System.out.println(result.toString());
+//      QueryResult result = QueryResult.ok(resultTuples);
+//      System.out.println(result.toString());
     }
 
-    System.out.println("Total time: " + totalTime + "ms");
+//    System.out.println("Total time: " + totalTime + " ns");
+//    System.out.print("Average time: " + totalTime * 1.0 / count + " ns => ");
+//    System.out.printf("%.3f ms\n", totalTime * 1.0 / count / 1000000);
+//    System.out.println("Total time: " + totalTime + " ms");
+//    System.out.println("Average time: " + totalTime * 1.0 / count + " ms");
+    double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
+    double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
+    double aveCachingTime = CohortProcessor.totalCachingTime / queries.size();
+    System.out.printf("Average Seek Time: %.2f ns => %.3f ms\n", aveSeekTime, aveSeekTime / 1000000);
+    System.out.printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
+    System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime, aveCachingTime / 1000000);
+    System.out.printf("Hit rate: %.2f%%\n", CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     coolModel.close();
   }
-
 }

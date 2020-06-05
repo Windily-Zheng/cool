@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
 
 public class CacheManager {
 
@@ -14,10 +15,18 @@ public class CacheManager {
 
   private static DiskStore diskStore;
 
-  public CacheManager(String cacheRoot, int memoryCacheSize, int diskCacheSize,
+  @Getter
+  private static double hitNum;
+
+  @Getter
+  private static double totalNum;
+
+  public CacheManager(String cacheRoot, double memoryCacheSize, double diskCacheSize,
       double entryCacheLimit) {
     memoryStore = new MemoryStore(memoryCacheSize, entryCacheLimit);
     diskStore = new DiskStore(cacheRoot, diskCacheSize, entryCacheLimit);
+    hitNum = 0;
+    totalNum = 0;
   }
 
   public void put(CacheKey cacheKey, BitSet bitSet, String storageLevel) throws IOException {
@@ -33,10 +42,16 @@ public class CacheManager {
 
   public Map<Integer, BitSet> load(List<CacheKey> cacheKeys, String storageLevel)
       throws IOException {
+    checkNotNull(storageLevel);
+    totalNum += cacheKeys.size();
     if ("MEMORY_ONLY".equals(storageLevel)) {
-      return memoryStore.load(cacheKeys);
+      Map<Integer, BitSet> cachedBitsets = memoryStore.load(cacheKeys);
+      hitNum += cachedBitsets.size();
+      return cachedBitsets;
     } else if ("DISK_ONLY".equals(storageLevel)) {
-      return diskStore.load(cacheKeys);
+      Map<Integer, BitSet> cachedBitsets = diskStore.load(cacheKeys);
+      hitNum += cachedBitsets.size();
+      return cachedBitsets;
     } else {
       throw new IllegalArgumentException("Illegal storageLevel: " + storageLevel);
     }

@@ -15,6 +15,7 @@
  */
 package com.nus.cool.loader;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.CohortAggregation;
@@ -53,34 +54,43 @@ import java.util.Map;
 public class CohortLoader {
 
   public List<CohortQuery> load() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
     List<CohortQuery> queries = Lists.newArrayList();
+    String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/query/";
 
-    CohortQuery query1 = new CohortQuery();
-    query1.setDataSource("sogamo");
-    query1.setAgeInterval(1);
-    query1.setMetric("Retention");
-    String[] cohortFields = {"country"};
-    query1.setCohortFields(cohortFields);
-    List<FieldSet> birthSelection = new ArrayList<>();
-    List<String> values = new ArrayList<>();
-    values.add("2013-05-20|2013-05-20");
-    FieldSet fieldSet = new FieldSet(FieldSet.FieldSetType.Set, "eventDay", values);
-    birthSelection.add(fieldSet);
-    query1.setBirthSelection(birthSelection);
-    query1.setBirthActions(new String[]{"launch"});
-    query1.setAppKey("fd1ec667-75a4-415d-a250-8fbb71be7cab");
+    for (int i = 1; i <= 10; i++) {
+      String fileName = queryRoot + "query" + i + ".json";
+      CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+      queries.add(query);
+    }
 
-    CohortQuery query2 = new CohortQuery();
-    query2.setDataSource("sogamo");
-    query2.setAgeInterval(1);
-    query2.setMetric("Retention");
-    query2.setCohortFields(cohortFields);
-    query2.setBirthSelection(birthSelection);
-    query2.setBirthActions(new String[]{"launch", "fight"});
-    query2.setAppKey("fd1ec667-75a4-415d-a250-8fbb71be7cab");
+//    CohortQuery query1 = new CohortQuery();
+//    query1.setDataSource("sogamo");
+//    query1.setAgeInterval(1);
+//    query1.setMetric("Retention");
+//    String[] cohortFields = {"country"};
+//    query1.setCohortFields(cohortFields);
+//    List<FieldSet> birthSelection = new ArrayList<>();
+//    List<String> values = new ArrayList<>();
+//    values.add("2013-05-20|2013-05-20");
+//    FieldSet fieldSet = new FieldSet(FieldSet.FieldSetType.Set, "eventDay", values);
+//    birthSelection.add(fieldSet);
+//    query1.setBirthSelection(birthSelection);
+//    query1.setBirthActions(new String[]{"launch"});
+//    query1.setAppKey("fd1ec667-75a4-415d-a250-8fbb71be7cab");
+//
+//    CohortQuery query2 = new CohortQuery();
+//    query2.setDataSource("sogamo");
+//    query2.setAgeInterval(1);
+//    query2.setMetric("Retention");
+//    query2.setCohortFields(cohortFields);
+//    query2.setBirthSelection(birthSelection);
+//    query2.setBirthActions(new String[]{"launch", "fight"});
+//    query2.setAppKey("fd1ec667-75a4-415d-a250-8fbb71be7cab");
+//
+//    queries.add(query1);
+//    queries.add(query2);
 
-    queries.add(query1);
-    queries.add(query2);
     return queries;
   }
 }

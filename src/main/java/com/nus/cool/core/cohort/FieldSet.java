@@ -20,7 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-@AllArgsConstructor
+//@AllArgsConstructor
 public class FieldSet {
 
   private FieldSetType fieldSetType;

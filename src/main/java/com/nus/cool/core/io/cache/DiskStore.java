@@ -24,15 +24,15 @@ public class DiskStore {
 
   private File cacheRoot;
 
-  private int diskCacheSize;
+  private double diskCacheSize;
 
-  private int entryCacheLimit;
+  private double entryCacheLimit;
 
-  private int usedDiskSize;
+  private double usedDiskSize;
 
   private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
 
-  public DiskStore(String path, int diskCacheSize, double entryCacheLimit) {
+  public DiskStore(String path, double diskCacheSize, double entryCacheLimit) {
     checkNotNull(path);
     this.cacheRoot = new File(path);
 
@@ -44,7 +44,7 @@ public class DiskStore {
     if (entryCacheLimit <= 0 || entryCacheLimit > 1) {
       throw new IllegalArgumentException("Illegal entryCacheLimit: " + entryCacheLimit);
     }
-    this.entryCacheLimit = (int) (entryCacheLimit * diskCacheSize);
+    this.entryCacheLimit = entryCacheLimit * diskCacheSize;
 
     this.usedDiskSize = 0;
 
@@ -101,8 +101,8 @@ public class DiskStore {
 
     if (bytesWritten >= entryCacheLimit) {
       cacheFile.delete();
-//      System.out.println(
-//          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached on disk!");
+      System.out.println(
+          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached on disk!");
       return;
     }
 
@@ -114,10 +114,10 @@ public class DiskStore {
     }
   }
 
-  private void evict(int size) {
-//    System.out.println("*** Evicting ***");
-//    System.out.println("usedDiskSize: " + usedDiskSize);
-//    System.out.println("Space needed to free: " + size);
+  private void evict(double size) {
+    System.out.println("*** Evicting ***");
+    System.out.println("usedDiskSize: " + usedDiskSize);
+    System.out.println("Space needed to free: " + size);
 
     int freeSize = 0;
     // LRU
