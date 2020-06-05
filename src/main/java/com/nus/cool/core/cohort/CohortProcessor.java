@@ -18,6 +18,18 @@ import java.util.Map;
 
 public class CohortProcessor {
 
+  // for testing
+  public static double totalSeekTime = 0;
+
+  // for testing
+  public static double totalLoadTime = 0;
+
+  // for testing
+  public static double totalCachingTime = 0;
+
+  // for testing
+  public static int chunkNum = 0;
+
   public List<ResultTuple> executeQuery(CubeRS cube, CohortQuery query, CacheManager cacheManager)
       throws IOException {
     List<CubletRS> cublets = cube.getCublets();
@@ -44,6 +56,12 @@ public class CohortProcessor {
               cubletFile.substring(0, cubletFile.length() - 3));
           bitSets.add(gamma.getBs());
         }
+
+        // for testing
+        totalSeekTime += gamma.totalSeekTime;
+        totalLoadTime += gamma.totalLoadTime;
+        totalCachingTime += gamma.totalCachingTime;
+        chunkNum += gamma.chunkNum;
       }
 //      if (tag) {
 //        int end = cublet.getLimit();

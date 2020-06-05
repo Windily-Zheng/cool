@@ -46,10 +46,12 @@ public class LocalLoader {
   public static void main(String[] args) throws IOException {
     File cubeRoot = new File(args[0]);
     TableSchema schema = TableSchema.read(new FileInputStream(new File(cubeRoot, "table.yaml")));
-    File dimensionFile = new File(cubeRoot, "dim_test.csv");
-    File dataFile = new File(cubeRoot, "test.csv");
+//        File dimensionFile = new File(cubeRoot, "dim_test.csv");
+//        File dataFile = new File(cubeRoot, "test.csv");
+    File dimensionFile = new File(cubeRoot, "dim_500M.csv");
+    File dataFile = new File(cubeRoot, "data_500M.csv");
     File outputDir = new File(cubeRoot, args[1]);
-    int chunkSize = 3000;
+    int chunkSize = 10000000;
 
     load(schema, dimensionFile, dataFile, outputDir, chunkSize);
   }

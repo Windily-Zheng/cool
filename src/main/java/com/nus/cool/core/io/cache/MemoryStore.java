@@ -10,15 +10,15 @@ import java.util.Map.Entry;
 
 public class MemoryStore {
 
-  private int memoryCacheSize;  // bits
+  private double memoryCacheSize;  // bits
 
-  private int entryCacheLimit;  // bits
+  private double entryCacheLimit;  // bits
 
-  private int usedMemorySize; // bits
+  private double usedMemorySize; // bits
 
   private Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
 
-  public MemoryStore(int memoryCacheSize, double entryCacheLimit) {
+  public MemoryStore(double memoryCacheSize, double entryCacheLimit) {
     if (memoryCacheSize <= 0) {
       throw new IllegalArgumentException("Illegal memoryCacheSize: " + memoryCacheSize);
     }
@@ -27,7 +27,7 @@ public class MemoryStore {
     if (entryCacheLimit <= 0 || entryCacheLimit > 1) {
       throw new IllegalArgumentException("Illegal entryCacheLimit: " + entryCacheLimit);
     }
-    this.entryCacheLimit = (int) (entryCacheLimit * memoryCacheSize * 8); // percentage => bits
+    this.entryCacheLimit = entryCacheLimit * memoryCacheSize * 8; // percentage => bits
 
     this.usedMemorySize = 0;
 
@@ -49,8 +49,8 @@ public class MemoryStore {
 
   public void put(CacheKey cacheKey, BitSet bitSet) {
     if (bitSet.size() >= entryCacheLimit) {
-//      System.out.println(
-//          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached in memory!");
+      System.out.println(
+          "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached in memory!");
       return;
     }
 
@@ -66,9 +66,9 @@ public class MemoryStore {
 //    System.out.println("usedMemorySize: " + usedMemorySize);
   }
 
-  private void evict(int size) {
-//    System.out.println("*** Evicting ***");
-//    System.out.println("Bits needed to free: " + size);
+  private void evict(double size) {
+    System.out.println("*** Evicting ***");
+    System.out.println("Bits needed to free: " + size);
 
     int freeSize = 0;
     // LRU
