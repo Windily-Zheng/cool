@@ -34,8 +34,11 @@ import com.nus.cool.core.io.storevector.RLEInputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import lombok.Getter;
 import java.util.BitSet;
 import java.util.List;
@@ -162,15 +165,16 @@ public class CohortAggregation implements Operator {
     chunkNum++;
 
     // Load chunk cache
+    Set<Integer> localIDSet = new HashSet<>();
     Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
     if (reuse) {
       long constructStart = System.nanoTime();
       List<CacheKey> cacheKeys = Lists.newArrayList();
-      for (int i = 0; i < this.bBirthActionChunkIDs.length; i++) {
-        CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(),
-            this.bBirthActionChunkIDs[i]);
+      for (int id : this.bBirthActionChunkIDs) {
         // avoid duplicate cacheKey
-        if (!cacheKeys.contains(cacheKey)) {
+        if (!localIDSet.contains(id)) {
+          localIDSet.add(id);
+          CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), id);
           cacheKeys.add(cacheKey);
         }
       }
@@ -195,12 +199,12 @@ public class CohortAggregation implements Operator {
 //      }
 
       // Caching missing Bitsets
-      if (cachedBitsets.size() < this.bBirthActionChunkIDs.length) {
+      if (cachedBitsets.size() < localIDSet.size()) {
 //        System.out.println("*** Caching missing Bitsets ***");
         long checkStart = System.nanoTime();
         Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
         // Check missing localIDs
-        for (int id : this.bBirthActionChunkIDs) {
+        for (int id : localIDSet) {
           if (!cachedBitsets.containsKey(id)) {
             BitSet bitSet = new BitSet(chunk.getRecords());
             toCacheBitsets.put(id, bitSet);
