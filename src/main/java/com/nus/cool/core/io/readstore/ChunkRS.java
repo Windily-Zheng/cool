@@ -51,11 +51,6 @@ import lombok.Getter;
 public class ChunkRS implements Input {
 
   /**
-   * number of record in this chunk
-   */
-  @Getter
-  private int records;
-  /**
    * identifier of a chunk (unique in a cublet)
    */
   @Getter
