@@ -93,16 +93,16 @@ public class CoolFieldRS implements FieldRS {
     }
 
     codec = Codec.fromInteger(buffer.get());
-    if (codec == Codec.PreCAL) {
-      int values = buffer.get();
-      this.bitSets = new BitSet[values];
-        for (int i = 0; i < values; i++) {
-            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
-        }
-    } else {
+//    if (codec == Codec.PreCAL) {
+//      int values = buffer.get();
+//      this.bitSets = new BitSet[values];
+//        for (int i = 0; i < values; i++) {
+//            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
+//        }
+//    } else {
       buffer.position(buffer.position() - 1);
       this.valueVec = InputVectorFactory.readFrom(buffer);
-    }
+//    }
   }
 
   @Override
@@ -149,15 +149,15 @@ public class CoolFieldRS implements FieldRS {
     }
 
     codec = Codec.fromInteger(buffer.get());
-    if (codec == Codec.PreCAL) {
-      int values = buffer.get();
-      this.bitSets = new BitSet[values];
-        for (int i = 0; i < values; i++) {
-            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
-        }
-    } else {
+//    if (codec == Codec.PreCAL) {
+//      int values = buffer.get();
+//      this.bitSets = new BitSet[values];
+//        for (int i = 0; i < values; i++) {
+//            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
+//        }
+//    } else {
       buffer.position(buffer.position() - 1);
       this.valueVec = InputVectorFactory.readFrom(buffer);
-    }
+//    }
   }
 }

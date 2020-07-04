@@ -67,11 +67,6 @@ public class ChunkWS implements Output {
   private int chunkID;
 
   /**
-   * Name of a cublet file
-   */
-  private String cubletFileName;
-
-  /**
    * Fields in data chunk
    */
   private FieldWS[] fields;
@@ -82,12 +77,11 @@ public class ChunkWS implements Output {
    * @param offset Offset in out stream
    * @param fields fields for this data chunk
    */
-  public ChunkWS(int offset, FieldWS[] fields, int chunkID, String cubletFileName) {
+  public ChunkWS(int offset, FieldWS[] fields, int chunkID) {
     this.fields = checkNotNull(fields);
     checkArgument(offset > 0 && fields.length > 0);
     this.offset = offset;
     this.chunkID = chunkID;
-    this.cubletFileName = checkNotNull(cubletFileName);
   }
 
   public static ChunkWS newChunk(TableSchema schema, MetaFieldWS[] metaFields, int offset,
@@ -115,7 +109,7 @@ public class ChunkWS implements Output {
       }
       i++;
     }
-    return new ChunkWS(offset, fields, chunkID, cubletFileName);
+    return new ChunkWS(offset, fields, chunkID);
   }
 
   /**
