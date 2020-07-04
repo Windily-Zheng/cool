@@ -170,32 +170,32 @@ public class HashFieldWS implements FieldWS {
 
     // Write compressed bitSetList if pre-calculate
 //    if (this.preCal) {
-      // Write codec
-      out.write(Codec.PreCAL.ordinal());
-      bytesWritten++;
-      // length of bitSetList should less than a value(i.e. 128), or may throw
-      // OOM error and compressed file size would be oversize.
-      out.write(this.bitSetList.size());
-      bytesWritten++;
-      for (BitSet bitSet : this.bitSetList) {
-        bytesWritten += SimpleBitSetCompressor.compress(bitSet, out);
-      }
+//      // Write codec
+//      out.write(Codec.PreCAL.ordinal());
+//      bytesWritten++;
+//      // length of bitSetList should less than a value(i.e. 128), or may throw
+//      // OOM error and compressed file size would be oversize.
+//      out.write(this.bitSetList.size());
+//      bytesWritten++;
+//      for (BitSet bitSet : this.bitSetList) {
+//        bytesWritten += SimpleBitSetCompressor.compress(bitSet, out);
+//      }
 //    } else {
-//      // Write compressed value vector
-//      min = ArrayUtil.min(value);
-//      max = ArrayUtil.max(value);
-//      count = value.length;
-//      rawSize = count * Ints.BYTES;
-//      hist = Histogram.builder()
-//          .sorted(this.fieldType == FieldType.AppKey || this.fieldType == FieldType.UserKey)
-//          .min(min)
-//          .max(max)
-//          .numOfValues(count)
-//          .rawSize(rawSize)
-//          .type(CompressType.Value)
-//          .build();
-//      this.compressor.reset(hist, value, 0, value.length);
-//      bytesWritten += this.compressor.writeTo(out);
+      // Write compressed value vector
+      min = ArrayUtil.min(value);
+      max = ArrayUtil.max(value);
+      count = value.length;
+      rawSize = count * Ints.BYTES;
+      hist = Histogram.builder()
+          .sorted(this.fieldType == FieldType.AppKey || this.fieldType == FieldType.UserKey)
+          .min(min)
+          .max(max)
+          .numOfValues(count)
+          .rawSize(rawSize)
+          .type(CompressType.Value)
+          .build();
+      this.compressor.reset(hist, value, 0, value.length);
+      bytesWritten += this.compressor.writeTo(out);
 //    }
 
     // Caching bitsets

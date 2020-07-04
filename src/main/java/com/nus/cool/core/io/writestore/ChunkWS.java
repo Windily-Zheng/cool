@@ -161,7 +161,6 @@ public class ChunkWS implements Output {
       offsets[i] = this.offset + bytesWritten;
       if (this.fields[i] instanceof HashFieldWS) {
         bytesWritten += this.fields[i].writeTo(out, reuse, storageLevel, cacheManager);
-        System.out.println(this.fields[i].getFieldType());
       } else {
         bytesWritten += this.fields[i].writeTo(out);
       }
