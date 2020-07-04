@@ -17,6 +17,7 @@ package com.nus.cool.loader;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.writestore.ChunkWS;
 import com.nus.cool.core.io.writestore.MetaChunkWS;
 import com.nus.cool.core.schema.TableSchema;
@@ -43,6 +44,10 @@ public class LocalLoader {
 
   private static List<Integer> chunkOffsets = Lists.newArrayList();
 
+  private static CacheManager cacheManager;
+
+  private static String cubletFileName = null;
+
   public static void main(String[] args) throws IOException {
     File cubeRoot = new File(args[0]);
     TableSchema schema = TableSchema.read(new FileInputStream(new File(cubeRoot, "table.yaml")));
@@ -53,11 +58,20 @@ public class LocalLoader {
     File outputDir = new File(cubeRoot, args[1]);
     int chunkSize = 10000000;
 
-    load(schema, dimensionFile, dataFile, outputDir, chunkSize);
+    double memoryCacheSize = (double) 1 * 1024 * 1024 * 1024;
+    double diskCacheSize = (double) 10 * 1024 * 1024 * 1024;
+
+    cacheManager = new CacheManager(args[2], memoryCacheSize, diskCacheSize, 0.8);
+
+    // TODO: Need to get from configuration
+    boolean reuse = true;
+    String storageLevel = "DISK_ONLY";
+
+    load(schema, dimensionFile, dataFile, outputDir, chunkSize, reuse, storageLevel);
   }
 
   public static void load(TableSchema tableSchema, File dimensionFile, File dataFile,
-      File outputDir, int chunkSize) throws IOException {
+      File outputDir, int chunkSize, boolean reuse, String storageLevel) throws IOException {
     TupleParser parser = new CsvTupleParser();
     MetaChunkWS metaChunk = newMetaChunk(dimensionFile, tableSchema, parser);
     DataOutputStream out = newCublet(outputDir, metaChunk);
@@ -66,7 +80,8 @@ public class LocalLoader {
     try (TupleReader reader = new LineTupleReader(dataFile)) {
       int tuples = 0;
       ChunkWS chunk = ChunkWS
-          .newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size() - 1);
+          .newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size() - 1,
+              cubletFileName);
       while (reader.hasNext()) {
         String line = (String) reader.next();
         String[] tuple = parser.parse(line);
@@ -77,21 +92,22 @@ public class LocalLoader {
         if (!curUser.equals(lastUser)) {
           lastUser = curUser;
           if (tuples >= chunkSize) {
-            offset += chunk.writeTo(out);
+            offset += chunk.writeTo(out, reuse, storageLevel, cacheManager);
             chunkOffsets.add(offset - Ints.BYTES);
             if (offset >= (1 << 30)) {
               closeCublet(out);
               out = newCublet(outputDir, metaChunk);
             }
             chunk = ChunkWS
-                .newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size() - 1);
+                .newChunk(tableSchema, metaChunk.getMetaFields(), offset, chunkOffsets.size() - 1,
+                    cubletFileName);
             tuples = 0;
           }
         }
         chunk.put(tuple);
         tuples++;
       }
-      offset += chunk.writeTo(out);
+      offset += chunk.writeTo(out, reuse, storageLevel, cacheManager);
       chunkOffsets.add(offset - Ints.BYTES);
       closeCublet(out);
     }
@@ -111,6 +127,7 @@ public class LocalLoader {
 
   private static DataOutputStream newCublet(File dir, MetaChunkWS metaChunk) throws IOException {
     File cublet = new File(dir, Long.toHexString(System.currentTimeMillis()) + ".dz");
+    cubletFileName = cublet.getName();
     DataOutputStream out = new DataOutputStream(new FileOutputStream(cublet));
     offset = metaChunk.writeTo(out);
     chunkOffsets.clear();
@@ -127,5 +144,6 @@ public class LocalLoader {
     out.writeInt(IntegerUtil.toNativeByteOrder(headOffset));
     out.flush();
     out.close();
+    cubletFileName = null;
   }
 }

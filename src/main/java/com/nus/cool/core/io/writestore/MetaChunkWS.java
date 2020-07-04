@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.primitives.Ints;
 import com.nus.cool.core.io.Output;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.compression.OutputCompressor;
 import com.nus.cool.core.schema.ChunkType;
 import com.nus.cool.core.schema.FieldSchema;
@@ -34,23 +35,15 @@ import lombok.Getter;
 /**
  * MetaChunk write store
  * <p>
- * MetaChunk layout
- * ------------------------------------------
- * | MetaChunkData | header | header offset |
- * ------------------------------------------
+ * MetaChunk layout ------------------------------------------ | MetaChunkData | header | header
+ * offset | ------------------------------------------
  * <p>
- * MetaChunkData layout
- * -------------------------------------
- * | field 1 | field 2 | ... | field N |
+ * MetaChunkData layout ------------------------------------- | field 1 | field 2 | ... | field N |
  * -------------------------------------
  * <p>
- * header layout
- * ---------------------------------------
- * | ChunkType | #fields | field offsets |
- * ---------------------------------------
- * where
- * ChunkType = ChunkType.META
- * #fields = number of fields
+ * header layout --------------------------------------- | ChunkType | #fields | field offsets |
+ * --------------------------------------- where ChunkType = ChunkType.META #fields = number of
+ * fields
  *
  * @author zhongle
  * @version 0.1
@@ -68,8 +61,8 @@ public class MetaChunkWS implements Output {
   /**
    * Create a MetaChunkWS instance
    *
-   * @param schema     TableSchema
-   * @param offset     Offset in out stream
+   * @param schema TableSchema
+   * @param offset Offset in out stream
    * @param metaFields meta fields for this meta chunk
    */
   public MetaChunkWS(TableSchema schema, int offset, MetaFieldWS[] metaFields) {
@@ -164,5 +157,11 @@ public class MetaChunkWS implements Output {
     out.writeInt(IntegerUtil.toNativeByteOrder(headOffset));
     bytesWritten += Ints.BYTES;
     return bytesWritten;
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
+    throw new UnsupportedOperationException();
   }
 }

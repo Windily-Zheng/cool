@@ -15,6 +15,7 @@
  */
 package com.nus.cool.core.io;
 
+import com.nus.cool.core.io.cache.CacheManager;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -35,4 +36,17 @@ public interface Output {
    * @throws IOException If an I/O error occurs
    */
   int writeTo(DataOutput out) throws IOException;
+
+  /**
+   * Write data to output stream and return bytes written
+   * Caching value bitsets for HashField if reuse is set to true
+   *
+   * @param out stream can write data to output stream
+   * @param reuse whether to cache value bitsets
+   * @param storageLevel storage level of cache
+   * @param cacheManager CacheManager that manages cache entries
+   * @return bytes written
+   * @throws IOException If an I/O error occurs
+   */
+  int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager) throws IOException;
 }

@@ -16,6 +16,7 @@
 package com.nus.cool.core.io.compression;
 
 import com.nus.cool.core.io.Output;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.schema.Codec;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -37,7 +38,7 @@ public class OutputCompressor implements Output {
   private Histogram hist;
 
   /**
-   * @param h   histogram of compress data
+   * @param h histogram of compress data
    * @param vec compress data
    * @param off the start offset in the data
    * @param len the number of bytes read
@@ -51,7 +52,7 @@ public class OutputCompressor implements Output {
   }
 
   /**
-   * @param h   histogram of compress data
+   * @param h histogram of compress data
    * @param vec compress data
    * @param off the start offset in the data
    * @param len the number of bytes read
@@ -81,6 +82,12 @@ public class OutputCompressor implements Output {
     out.write(compressed, 0, compressLen);
     bytesWritten += compressLen;
     return bytesWritten;
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   private enum DataType {INTEGER, STRING}

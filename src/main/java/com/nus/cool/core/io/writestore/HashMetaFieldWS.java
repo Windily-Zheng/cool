@@ -18,6 +18,7 @@ package com.nus.cool.core.io.writestore;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.nus.cool.core.io.DataOutputBuffer;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.compression.Histogram;
 import com.nus.cool.core.io.compression.OutputCompressor;
 import com.nus.cool.core.schema.CompressType;
@@ -31,17 +32,13 @@ import java.util.Map;
 /**
  * Hash MetaField write store
  * <p>
- * Hash MetaField layout
- * ---------------------------------------
- * | finger codec | fingers | value data |
- * ---------------------------------------
+ * Hash MetaField layout --------------------------------------- | finger codec | fingers | value
+ * data | ---------------------------------------
  * <p>
  * if fieldType == AppId, we do NOT store values
  * <p>
- * value data layout
- * --------------------------------------------------
- * | #values | value codec | value offsets | values |
- * --------------------------------------------------
+ * value data layout -------------------------------------------------- | #values | value codec |
+ * value offsets | values | --------------------------------------------------
  *
  * @author zhongle
  * @version 0.1
@@ -151,6 +148,12 @@ public class HashMetaFieldWS implements MetaFieldWS {
       }
     }
     return bytesWritten;
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   /**

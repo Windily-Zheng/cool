@@ -23,6 +23,8 @@ import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.nus.cool.core.io.DataInputBuffer;
 import com.nus.cool.core.io.DataOutputBuffer;
+import com.nus.cool.core.io.cache.CacheKey;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.compression.Histogram;
 import com.nus.cool.core.io.compression.OutputCompressor;
 import com.nus.cool.core.io.compression.SimpleBitSetCompressor;
@@ -40,12 +42,7 @@ import java.util.Map;
  * Hash-like indexed field, used to store chunk data for four fieldTypes, including AppKey, UserKey,
  * Action, Segment
  * <p>
- * Data Layout
- * -----------------
- * | keys | values |
- * -----------------
- * where
- * keys = globalIDs
+ * Data Layout ----------------- | keys | values | ----------------- where keys = globalIDs
  * (compressed) values = column data, stored as localIDs (compressed)
  *
  * @author zhongle, hongbin
@@ -65,6 +62,12 @@ public class HashFieldWS implements FieldWS {
 
   private final FieldType fieldType;
 
+  private String cubletFileName;
+
+  private String fieldName;
+
+  private int chunkID;
+
   /**
    * Convert globalID to localID key: globalID value: localID
    */
@@ -77,13 +80,16 @@ public class HashFieldWS implements FieldWS {
   private Boolean preCal;
 
   public HashFieldWS(FieldType fieldType, int i, MetaFieldWS metaField, OutputCompressor compressor,
-      boolean preCal) {
+      boolean preCal, String cubletFileName, String fieldName, int chunkID) {
     checkArgument(i >= 0);
     this.fieldType = fieldType;
     this.i = i;
     this.metaField = checkNotNull(metaField);
     this.compressor = checkNotNull(compressor);
     this.preCal = preCal;
+    this.cubletFileName = cubletFileName;
+    this.fieldName = fieldName;
+    this.chunkID = chunkID;
   }
 
   @Override
@@ -108,6 +114,12 @@ public class HashFieldWS implements FieldWS {
 
   @Override
   public int writeTo(DataOutput out) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
     int bytesWritten = 0;
     int size = this.buffer.size() / Ints.BYTES;
 
@@ -119,7 +131,7 @@ public class HashFieldWS implements FieldWS {
       // Store localID into the map
       en.setValue(i);
       // Store value bitSet if pre-calculate
-      if (this.preCal) {
+      if (this.preCal && reuse) {
         BitSet bitSet = new BitSet(size);
         this.bitSetList.add(bitSet);
       }
@@ -134,7 +146,7 @@ public class HashFieldWS implements FieldWS {
         int id = input.readInt();
         // Store value as localID
         value[i] = this.idMap.get(id);
-        if (this.preCal) {
+        if (this.preCal && reuse) {
           // Store value bitSet
           this.bitSetList.get(this.idMap.get(id)).set(i);
         }
@@ -157,7 +169,7 @@ public class HashFieldWS implements FieldWS {
     bytesWritten += this.compressor.writeTo(out);
 
     // Write compressed bitSetList if pre-calculate
-    if (this.preCal) {
+//    if (this.preCal) {
       // Write codec
       out.write(Codec.PreCAL.ordinal());
       bytesWritten++;
@@ -168,22 +180,30 @@ public class HashFieldWS implements FieldWS {
       for (BitSet bitSet : this.bitSetList) {
         bytesWritten += SimpleBitSetCompressor.compress(bitSet, out);
       }
-    } else {
-      // Write compressed value vector
-      min = ArrayUtil.min(value);
-      max = ArrayUtil.max(value);
-      count = value.length;
-      rawSize = count * Ints.BYTES;
-      hist = Histogram.builder()
-          .sorted(this.fieldType == FieldType.AppKey || this.fieldType == FieldType.UserKey)
-          .min(min)
-          .max(max)
-          .numOfValues(count)
-          .rawSize(rawSize)
-          .type(CompressType.Value)
-          .build();
-      this.compressor.reset(hist, value, 0, value.length);
-      bytesWritten += this.compressor.writeTo(out);
+//    } else {
+//      // Write compressed value vector
+//      min = ArrayUtil.min(value);
+//      max = ArrayUtil.max(value);
+//      count = value.length;
+//      rawSize = count * Ints.BYTES;
+//      hist = Histogram.builder()
+//          .sorted(this.fieldType == FieldType.AppKey || this.fieldType == FieldType.UserKey)
+//          .min(min)
+//          .max(max)
+//          .numOfValues(count)
+//          .rawSize(rawSize)
+//          .type(CompressType.Value)
+//          .build();
+//      this.compressor.reset(hist, value, 0, value.length);
+//      bytesWritten += this.compressor.writeTo(out);
+//    }
+
+    // Caching bitsets
+    if (this.preCal && reuse) {
+      for (int id = 0; id < this.bitSetList.size(); id++) {
+        CacheKey cacheKey = new CacheKey(cubletFileName, fieldName, chunkID, id);
+        cacheManager.put(cacheKey, bitSetList.get(id), storageLevel);
+      }
     }
     return bytesWritten;
   }
