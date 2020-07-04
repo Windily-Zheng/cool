@@ -127,7 +127,8 @@ public class LocalLoader {
 
   private static DataOutputStream newCublet(File dir, MetaChunkWS metaChunk) throws IOException {
     File cublet = new File(dir, Long.toHexString(System.currentTimeMillis()) + ".dz");
-    cubletFileName = cublet.getName();
+    String cubletFile = cublet.getName();
+    cubletFileName = cubletFile.substring(0, cubletFile.length() - 3);
     DataOutputStream out = new DataOutputStream(new FileOutputStream(cublet));
     offset = metaChunk.writeTo(out);
     chunkOffsets.clear();
