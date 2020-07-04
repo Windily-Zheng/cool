@@ -174,7 +174,8 @@ public class CohortAggregation implements Operator {
         // avoid duplicate cacheKey
         if (!localIDSet.contains(id)) {
           localIDSet.add(id);
-          CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), id);
+          CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
+              chunk.getChunkID(), id);
           cacheKeys.add(cacheKey);
         }
       }
@@ -233,7 +234,8 @@ public class CohortAggregation implements Operator {
         // Caching Bitsets
         long cachingStart = System.nanoTime();
         for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
-          CacheKey cacheKey = new CacheKey(cubletFileName, chunk.getChunkID(), entry.getKey());
+          CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
+              chunk.getChunkID(), entry.getKey());
           cacheManager.put(cacheKey, entry.getValue(), storageLevel);
           cachedBitsets.put(entry.getKey(), entry.getValue());
         }
