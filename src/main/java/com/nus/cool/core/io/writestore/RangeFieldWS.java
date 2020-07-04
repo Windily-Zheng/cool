@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.primitives.Ints;
 import com.nus.cool.core.io.DataInputBuffer;
 import com.nus.cool.core.io.DataOutputBuffer;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.compression.Histogram;
 import com.nus.cool.core.io.compression.OutputCompressor;
 import com.nus.cool.core.schema.Codec;
@@ -35,14 +36,9 @@ import java.io.IOException;
 /**
  * Range index, used to store chunk data for two fieldTypes, including ActionTime, Metric.
  * <p>
- * Data layout
- * ------------------------------
- * | codec | min | max | values |
- * ------------------------------
- * where
- * min = min of the values
- * max = max of the values
- * values = column data (compressed)
+ * Data layout ------------------------------ | codec | min | max | values |
+ * ------------------------------ where min = min of the values max = max of the values values =
+ * column data (compressed)
  *
  * @author zhongle
  * @version 0.1
@@ -75,12 +71,12 @@ public class RangeFieldWS implements FieldWS {
 
   @Override
   public void put(String[] tuple) throws IOException {
-      if (this.fieldType == FieldType.ActionTime) {
-          DayIntConverter converter = new DayIntConverter();
-          this.buffer.writeInt(converter.toInt(tuple[this.i]));
-      } else {
-          this.buffer.writeInt(Integer.parseInt(tuple[i]));
-      }
+    if (this.fieldType == FieldType.ActionTime) {
+      DayIntConverter converter = new DayIntConverter();
+      this.buffer.writeInt(converter.toInt(tuple[this.i]));
+    } else {
+      this.buffer.writeInt(Integer.parseInt(tuple[i]));
+    }
   }
 
   @Override
@@ -93,9 +89,9 @@ public class RangeFieldWS implements FieldWS {
     // TODO: Bloated code
     try (DataInputBuffer input = new DataInputBuffer()) {
       input.reset(this.buffer);
-        for (int i = 0; i < value.length; i++) {
-            value[i] = input.readInt();
-        }
+      for (int i = 0; i < value.length; i++) {
+        value[i] = input.readInt();
+      }
     }
 
     key[0] = ArrayUtil.min(value);
@@ -124,5 +120,11 @@ public class RangeFieldWS implements FieldWS {
     this.compressor.reset(hist, value, 0, value.length);
     bytesWritten += this.compressor.writeTo(out);
     return bytesWritten;
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
+    throw new UnsupportedOperationException();
   }
 }

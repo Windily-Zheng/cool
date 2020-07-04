@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.primitives.Ints;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.util.IntegerUtil;
 import com.nus.cool.core.util.converter.DayIntConverter;
@@ -30,10 +31,7 @@ import java.io.IOException;
 /**
  * Range MetaField write store
  * <p>
- * Data Layout
- * -------------
- * | min | max |
- * -------------
+ * Data Layout ------------- | min | max | -------------
  *
  * @author zhongle
  * @version 0.1
@@ -102,5 +100,11 @@ public class RangeMetaFieldWS implements MetaFieldWS {
     out.writeInt(IntegerUtil.toNativeByteOrder(this.max));
     bytesWritten += 2 * Ints.BYTES;
     return bytesWritten;
+  }
+
+  @Override
+  public int writeTo(DataOutput out, boolean reuse, String storageLevel, CacheManager cacheManager)
+      throws IOException {
+    throw new UnsupportedOperationException();
   }
 }
