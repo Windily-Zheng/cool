@@ -23,6 +23,7 @@ import com.nus.cool.core.io.storevector.InputVector;
 import com.nus.cool.core.util.ArrayUtil;
 import java.util.BitSet;
 import java.util.List;
+import lombok.Getter;
 
 /**
  * @author zhongle, hongbin
@@ -37,6 +38,7 @@ public class SetFieldFilter implements FieldFilter {
 
   private int[] cubeIDs;
 
+  @Getter
   private BitSet filter;
 
   private InputVector chunkValues;

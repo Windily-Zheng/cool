@@ -165,18 +165,21 @@ public class CohortAggregation implements Operator {
     chunkNum++;
 
     // Load chunk cache
-    Set<Integer> localIDSet = new HashSet<>();
-    Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+    Set<Integer> birthIDSet = new HashSet<>();
+    Map<Integer, BitSet> cachedBirthBitsets = Maps.newLinkedHashMap();
+    Map<String, Map<Integer, BitSet>> cachedAgeBitsets = Maps.newLinkedHashMap();
+
     if (reuse) {
+      // Construct birth action cacheKeys
       long constructStart = System.nanoTime();
-      List<CacheKey> cacheKeys = Lists.newArrayList();
+      List<CacheKey> birthCacheKeys = Lists.newArrayList();
       for (int id : this.bBirthActionChunkIDs) {
         // avoid duplicate cacheKey
-        if (!localIDSet.contains(id)) {
-          localIDSet.add(id);
+        if (!birthIDSet.contains(id)) {
+          birthIDSet.add(id);
           CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
               chunk.getChunkID(), id);
-          cacheKeys.add(cacheKey);
+          birthCacheKeys.add(cacheKey);
         }
       }
       long constructEnd = System.nanoTime();
@@ -184,29 +187,47 @@ public class CohortAggregation implements Operator {
 //      System.out.println("Construct CacheKeys: " + constructTime + "ns");
 
 //      System.out.println("*** Loading cached Bitsets ***");
+      // Load birth action cache
       long loadStart = System.nanoTime();
-      cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+      cachedBirthBitsets = cacheManager.load(birthCacheKeys, storageLevel);
       long loadEnd = System.nanoTime();
       long loadTime = (loadEnd - loadStart);
 //      System.out.println("Load chunk cache: " + loadTime + "ns");
       totalLoadTime += (constructTime + loadTime);
 
-//      System.out.println("Load " + cachedBitsets.size() + " Bitsets");
-//      if (!cachedBitsets.isEmpty()) {
+//      System.out.println("Load " + cachedBirthBitsets.size() + " Bitsets");
+//      if (!cachedBirthBitsets.isEmpty()) {
 //        System.out.println("Local IDs:");
-//        for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
+//        for (Map.Entry<Integer, BitSet> entry : cachedBirthBitsets.entrySet()) {
 //          System.out.println(entry.getKey());
 //        }
 //      }
 
+      // Construct age selection cacheKeys
+      Map<String, BitSet> ageFilterBitsets = this.sigma.getAgeFilterBitsets();
+      for (Map.Entry<String, BitSet> entry : ageFilterBitsets.entrySet()) {
+        List<CacheKey> ageCacheKeys = Lists.newArrayList();
+        BitSet filter = entry.getValue();
+        int pos = 0;
+        pos = filter.nextSetBit(pos);
+        while (pos >= 0) {
+          CacheKey cacheKey = new CacheKey(cubletFileName, entry.getKey(), chunk.getChunkID(), pos);
+          ageCacheKeys.add(cacheKey);
+          pos = filter.nextSetBit(pos);
+        }
+        // Load age selection cache
+        Map<Integer, BitSet> cachedAgeFieldBitsets = cacheManager.load(ageCacheKeys, storageLevel);
+        cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
+      }
+
       // Caching missing Bitsets
-      if (cachedBitsets.size() < localIDSet.size()) {
+      if (cachedBirthBitsets.size() < birthIDSet.size()) {
 //        System.out.println("*** Caching missing Bitsets ***");
         long checkStart = System.nanoTime();
         Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
         // Check missing localIDs
-        for (int id : localIDSet) {
-          if (!cachedBitsets.containsKey(id)) {
+        for (int id : birthIDSet) {
+          if (!cachedBirthBitsets.containsKey(id)) {
             BitSet bitSet = new BitSet(chunk.getRecords());
             toCacheBitsets.put(id, bitSet);
 //            System.out.println("Missing local ID: " + id);
@@ -237,7 +258,7 @@ public class CohortAggregation implements Operator {
           CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
               chunk.getChunkID(), entry.getKey());
           cacheManager.put(cacheKey, entry.getValue(), storageLevel);
-          cachedBitsets.put(entry.getKey(), entry.getValue());
+          cachedBirthBitsets.put(entry.getKey(), entry.getValue());
         }
         long cachingEnd = System.nanoTime();
         long cachingTime = cachingEnd - cachingStart;
@@ -273,7 +294,7 @@ public class CohortAggregation implements Operator {
 
           if (reuse) {
             long seekStart = System.nanoTime();
-            birthOff = seekToReuseBirthTuple(begin, end, cachedBitsets);
+            birthOff = seekToReuseBirthTuple(begin, end, cachedBirthBitsets);
             long seekEnd = System.nanoTime();
 //            System.out.println("seekToReuseBirthTuple: " + (endTime - startTime) + "ns");
             totalSeekTime += (seekEnd - seekStart);

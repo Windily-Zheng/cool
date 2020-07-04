@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.filter.FieldFilter;
 import com.nus.cool.core.cohort.filter.FieldFilterFactory;
+import com.nus.cool.core.cohort.filter.SetFieldFilter;
 import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
 import com.nus.cool.core.io.readstore.FieldRS;
@@ -179,5 +180,16 @@ public class CohortSelection implements Operator {
         }
       }
     }
+  }
+
+  public Map<String, BitSet> getAgeFilterBitsets() {
+    Map<String, BitSet> ageFilterBitsets = Maps.newLinkedHashMap();
+    for (Map.Entry<String, FieldFilter> entry : this.ageFilters.entrySet()) {
+      FieldFilter ageFilter = entry.getValue();
+      if (ageFilter instanceof SetFieldFilter) {
+        ageFilterBitsets.put(entry.getKey(), ((SetFieldFilter) ageFilter).getFilter());
+      }
+    }
+    return ageFilterBitsets;
   }
 }

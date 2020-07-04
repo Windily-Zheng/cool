@@ -43,6 +43,7 @@ public class CacheManager {
   public Map<Integer, BitSet> load(List<CacheKey> cacheKeys, String storageLevel)
       throws IOException {
     checkNotNull(storageLevel);
+    // TODO: Need to load from disk cache (MEMORY_AND_DISK)
     totalNum += cacheKeys.size();
     if ("MEMORY_ONLY".equals(storageLevel)) {
       Map<Integer, BitSet> cachedBitsets = memoryStore.load(cacheKeys);
