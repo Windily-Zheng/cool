@@ -67,6 +67,7 @@ public class MemoryStore {
   }
 
   private void evict(double size) {
+    // TODO: Need to evict to disk cache (MEMORY_AND_DISK)
     System.out.println("*** Evicting ***");
     System.out.println("Bits needed to free: " + size);
 
