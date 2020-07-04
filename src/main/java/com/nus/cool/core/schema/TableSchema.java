@@ -118,4 +118,8 @@ public class TableSchema {
   public String getActionTimeFieldName() {
     return this.fields.get(this.getActionTimeField()).getName();
   }
+
+  public String getActionFieldName() {
+    return this.fields.get(this.getActionField()).getName();
+  }
 }
