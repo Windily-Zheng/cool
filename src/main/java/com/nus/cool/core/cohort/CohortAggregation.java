@@ -164,7 +164,7 @@ public class CohortAggregation implements Operator {
 //    System.out.println("*** Chunk ID: " + chunk.getChunkID() + " ***");
     chunkNum++;
 
-    // Load chunk cache
+    // 1. Load chunk cache
     Set<Integer> birthIDSet = new HashSet<>();
     Map<Integer, BitSet> cachedBirthBitsets = Maps.newLinkedHashMap();
     Map<String, Map<Integer, BitSet>> cachedAgeBitsets = Maps.newLinkedHashMap();
@@ -220,16 +220,17 @@ public class CohortAggregation implements Operator {
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
       }
 
-      // Caching missing Bitsets
+      // 2. Generate missing bitsets
+      // Generate missing birth bitsets
       if (cachedBirthBitsets.size() < birthIDSet.size()) {
 //        System.out.println("*** Caching missing Bitsets ***");
         long checkStart = System.nanoTime();
-        Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
+        Map<Integer, BitSet> toCacheBirthBitsets = Maps.newLinkedHashMap();
         // Check missing localIDs
         for (int id : birthIDSet) {
           if (!cachedBirthBitsets.containsKey(id)) {
             BitSet bitSet = new BitSet(chunk.getRecords());
-            toCacheBitsets.put(id, bitSet);
+            toCacheBirthBitsets.put(id, bitSet);
 //            System.out.println("Missing local ID: " + id);
           }
         }
@@ -243,8 +244,8 @@ public class CohortAggregation implements Operator {
         actionInput.skipTo(pos);
         while (actionInput.hasNext()) {
           int key = actionInput.next();
-          if (toCacheBitsets.containsKey(key)) {
-            toCacheBitsets.get(key).set(pos);
+          if (toCacheBirthBitsets.containsKey(key)) {
+            toCacheBirthBitsets.get(key).set(pos);
           }
           pos++;
         }
@@ -254,7 +255,7 @@ public class CohortAggregation implements Operator {
 
         // Caching Bitsets
         long cachingStart = System.nanoTime();
-        for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
+        for (Map.Entry<Integer, BitSet> entry : toCacheBirthBitsets.entrySet()) {
           CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
               chunk.getChunkID(), entry.getKey());
           cacheManager.put(cacheKey, entry.getValue(), storageLevel);
