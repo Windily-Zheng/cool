@@ -15,6 +15,8 @@ public class CacheManager {
 
   private static DiskStore diskStore;
 
+  private static Map<CacheEntry, String> toCacheBitsets;
+
   @Getter
   private static double hitNum;
 
@@ -55,6 +57,18 @@ public class CacheManager {
       return cachedBitsets;
     } else {
       throw new IllegalArgumentException("Illegal storageLevel: " + storageLevel);
+    }
+  }
+
+  public void addToCacheBitsets(CacheKey cacheKey, BitSet bitSet, String storageLevel) {
+    CacheEntry cacheEntry = new CacheEntry(cacheKey, bitSet);
+    toCacheBitsets.put(cacheEntry, storageLevel);
+  }
+
+  public void caching() throws IOException {
+    for (Map.Entry<CacheEntry, String> entry : toCacheBitsets.entrySet()) {
+      CacheEntry cacheEntry = entry.getKey();
+      put(cacheEntry.getCacheKey(), cacheEntry.getBitSet(), entry.getValue());
     }
   }
 }
