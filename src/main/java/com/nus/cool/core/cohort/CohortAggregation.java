@@ -226,7 +226,7 @@ public class CohortAggregation implements Operator {
 //        System.out.println("*** Caching missing Bitsets ***");
         long checkStart = System.nanoTime();
         Map<Integer, BitSet> toCacheBirthBitsets = Maps.newLinkedHashMap();
-        // Check missing localIDs
+        // Check missing birth localIDs
         for (int id : birthIDSet) {
           if (!cachedBirthBitsets.containsKey(id)) {
             BitSet bitSet = new BitSet(chunk.getRecords());
@@ -238,7 +238,7 @@ public class CohortAggregation implements Operator {
         long checkTime = checkEnd - checkStart;
 //        System.out.println("Check missed localIDs: " + checkTime + "ns");
 
-        // Traverse actionInput to get missing Bitsets
+        // Traverse actionInput to generate missing birth bitsets
         long traverseStart = System.nanoTime();
         int pos = 0;
         actionInput.skipTo(pos);
@@ -253,12 +253,13 @@ public class CohortAggregation implements Operator {
         long traverseTime = traverseEnd - traverseStart;
 //        System.out.println("Traverse InputVector: " + traverseTime + "ns");
 
-        // Caching Bitsets
+        // Add missing birth bitsets to cache
         long cachingStart = System.nanoTime();
         for (Map.Entry<Integer, BitSet> entry : toCacheBirthBitsets.entrySet()) {
           CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
               chunk.getChunkID(), entry.getKey());
-          cacheManager.put(cacheKey, entry.getValue(), storageLevel);
+//          cacheManager.put(cacheKey, entry.getValue(), storageLevel);
+          cacheManager.addToCacheBitsets(cacheKey, entry.getValue(), storageLevel);
           cachedBirthBitsets.put(entry.getKey(), entry.getValue());
         }
         long cachingEnd = System.nanoTime();
