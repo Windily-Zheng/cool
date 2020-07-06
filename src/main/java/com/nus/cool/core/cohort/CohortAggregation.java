@@ -167,6 +167,7 @@ public class CohortAggregation implements Operator {
     // 1. Load chunk cache
     Set<Integer> birthIDSet = new HashSet<>();
     Map<Integer, BitSet> cachedBirthBitsets = Maps.newLinkedHashMap();
+    Map<String, Set<Integer>> ageIDSets = Maps.newLinkedHashMap();
     Map<String, Map<Integer, BitSet>> cachedAgeBitsets = Maps.newLinkedHashMap();
 
     if (reuse) {
@@ -208,14 +209,17 @@ public class CohortAggregation implements Operator {
       for (Map.Entry<String, BitSet> entry : ageFilterBitsets.entrySet()) {
         List<CacheKey> ageCacheKeys = Lists.newArrayList();
         BitSet filter = entry.getValue();
+        Set<Integer> ageIDSet = new HashSet<>();
         int pos = 0;
         pos = filter.nextSetBit(pos);
         while (pos >= 0) {
+          ageIDSet.add(pos);
           CacheKey cacheKey = new CacheKey(cubletFileName, entry.getKey(), chunk.getChunkID(), pos);
           ageCacheKeys.add(cacheKey);
-          pos = filter.nextSetBit(pos);
+          pos = filter.nextSetBit(pos + 1);
         }
         // Load age selection cache
+        ageIDSets.put(entry.getKey(), ageIDSet);
         Map<Integer, BitSet> cachedAgeFieldBitsets = cacheManager.load(ageCacheKeys, storageLevel);
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
       }
@@ -266,6 +270,44 @@ public class CohortAggregation implements Operator {
         long cachingTime = cachingEnd - cachingStart;
 //        System.out.println("Caching: " + cachingTime + "ns");
         totalCachingTime += (checkTime + traverseTime + cachingTime);
+      }
+
+      // Generate missing age bitsets
+      for (Map.Entry<String, Set<Integer>> entry : ageIDSets.entrySet()) {
+        Set<Integer> ageIDSet = entry.getValue();
+        Map<Integer, BitSet> cachedAgeFieldBitsets = cachedAgeBitsets.get(entry.getKey());
+        if (cachedAgeFieldBitsets.size() < ageIDSet.size()) {
+          Map<Integer, BitSet> toCacheAgeBitsets = Maps.newLinkedHashMap();
+          // Check missing birth localIDs
+          for (int id : ageIDSet) {
+            if (!cachedAgeFieldBitsets.containsKey(id)) {
+              BitSet bitSet = new BitSet(chunk.getRecords());
+              toCacheAgeBitsets.put(id, bitSet);
+            }
+          }
+
+          // Traverse InputVector to generate missing age bitsets
+          FieldRS ageField = loadField(chunk, entry.getKey());
+          InputVector ageInput = ageField.getValueVector();
+          int pos = 0;
+          ageInput.skipTo(pos);
+          while (ageInput.hasNext()) {
+            int key = ageInput.next();
+            if (toCacheAgeBitsets.containsKey(key)) {
+              toCacheAgeBitsets.get(key).set(pos);
+            }
+            pos++;
+          }
+
+          // Add missing age bitsets to cache
+          for (Map.Entry<Integer, BitSet> en : toCacheAgeBitsets.entrySet()) {
+            CacheKey cacheKey = new CacheKey(cubletFileName, entry.getKey(), chunk.getChunkID(),
+                en.getKey());
+            cacheManager.addToCacheBitsets(cacheKey, en.getValue(), storageLevel);
+            cachedAgeFieldBitsets.put(en.getKey(), en.getValue());
+          }
+          cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
+        }
       }
     }
 

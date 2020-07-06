@@ -58,11 +58,15 @@ public class CohortLoader {
     List<CohortQuery> queries = Lists.newArrayList();
     String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/query/";
 
-    for (int i = 1; i <= 10; i++) {
-      String fileName = queryRoot + "query" + i + ".json";
-      CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
-      queries.add(query);
-    }
+//    for (int i = 1; i <= 10; i++) {
+//      String fileName = queryRoot + "query" + i + ".json";
+//      CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+//      queries.add(query);
+//    }
+
+    String fileName = queryRoot + "query.json";
+    CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+    queries.add(query);
 
 //    CohortQuery query1 = new CohortQuery();
 //    query1.setDataSource("sogamo");
