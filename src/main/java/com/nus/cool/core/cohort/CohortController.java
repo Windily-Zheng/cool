@@ -66,6 +66,8 @@ public class CohortController {
       List<ResultTuple> resultTuples = cohortProcessor
           .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
 
+      cacheManager.caching();
+
 //      long endTime = System.currentTimeMillis();
 //      long endTime = System.nanoTime();
 //      long queryTime = endTime - startTime;
