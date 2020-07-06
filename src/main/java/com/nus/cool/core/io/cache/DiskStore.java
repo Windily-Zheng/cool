@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 public class DiskStore {
 
@@ -77,8 +78,8 @@ public class DiskStore {
     }
   }
 
-  public Map<Integer, BitSet> load(List<CacheKey> cacheKeys) throws IOException {
-    Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+  public Map<CacheKey, BitSet> load(List<CacheKey> cacheKeys) throws IOException {
+    Map<CacheKey, BitSet> cachedBitsets = Maps.newLinkedHashMap();
     for (CacheKey cacheKey : cacheKeys) {
       if (blockSizes.containsKey(cacheKey)) {
         blockSizes.get(cacheKey);
@@ -86,7 +87,7 @@ public class DiskStore {
         if (cacheFile.exists()) {
           ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
           BitSet bitSet = SimpleBitSetCompressor.read(buffer);
-          cachedBitsets.put(cacheKey.getLocalID(), bitSet);
+          cachedBitsets.put(cacheKey, bitSet);
         }
       }
     }
@@ -140,5 +141,9 @@ public class DiskStore {
 
 //    System.out.println("Total free size: " + freeSize);
 //    System.out.println();
+  }
+
+  public Set<CacheKey> getCachedKeys() {
+    return blockSizes.keySet();
   }
 }

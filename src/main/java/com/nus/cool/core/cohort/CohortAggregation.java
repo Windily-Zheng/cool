@@ -191,7 +191,10 @@ public class CohortAggregation implements Operator {
 //      System.out.println("*** Loading cached Bitsets ***");
       // Load birth action cache
       long loadStart = System.nanoTime();
-      cachedBirthBitsets = cacheManager.load(birthCacheKeys, storageLevel);
+      Map<CacheKey, BitSet> loadBirthBitsets = cacheManager.load(birthCacheKeys, storageLevel);
+      for (Map.Entry<CacheKey, BitSet> entry : loadBirthBitsets.entrySet()) {
+        cachedBirthBitsets.put(entry.getKey().getLocalID(), entry.getValue());
+      }
       long loadEnd = System.nanoTime();
       long loadTime = (loadEnd - loadStart);
 //      System.out.println("Load chunk cache: " + loadTime + "ns");
@@ -221,7 +224,11 @@ public class CohortAggregation implements Operator {
         }
         // Load age selection cache
         ageIDSets.put(entry.getKey(), ageIDSet);
-        Map<Integer, BitSet> cachedAgeFieldBitsets = cacheManager.load(ageCacheKeys, storageLevel);
+        Map<Integer, BitSet> cachedAgeFieldBitsets = Maps.newLinkedHashMap();
+        Map<CacheKey, BitSet> loadAgeBitsets = cacheManager.load(ageCacheKeys, storageLevel);
+        for (Map.Entry<CacheKey, BitSet> en : loadAgeBitsets.entrySet()) {
+          cachedAgeFieldBitsets.put(en.getKey().getLocalID(), en.getValue());
+        }
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
       }
 
