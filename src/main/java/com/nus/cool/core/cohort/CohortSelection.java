@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.filter.FieldFilter;
 import com.nus.cool.core.cohort.filter.FieldFilterFactory;
+import com.nus.cool.core.cohort.filter.RangeFieldFilter;
 import com.nus.cool.core.cohort.filter.SetFieldFilter;
 import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
@@ -47,11 +48,13 @@ public class CohortSelection implements Operator {
   @Getter
   private boolean bUserActiveCublet;
 
+  @Getter
   private boolean bAgeActiveCublet;
 
   @Getter
   private boolean bUserActiveChunk;
 
+  @Getter
   private boolean bAgeActiveChunk;
 
   @Getter
@@ -177,6 +180,33 @@ public class CohortSelection implements Operator {
             bs.clear(off);
           }
           off = bs.nextSetBit(off + 1);
+        }
+      }
+    }
+  }
+
+  public void selectAgeActivitiesUsingBitset(int ageOff, int ageEnd, BitSet bs) {
+    for (Map.Entry<String, FieldFilter> entry : this.ageFilters.entrySet()) {
+      if (!(entry.getValue() instanceof SetFieldFilter)) {
+        FieldRS field = this.ageFilterFields.get(entry.getKey());
+        InputVector fieldInput = field.getValueVector();
+        fieldInput.skipTo(ageOff);
+        FieldFilter ageFilter = entry.getValue();
+        if ((bs.cardinality() << 1) >= (ageEnd - ageOff)) {
+          for (int i = ageOff; i < ageEnd; i++) {
+            if (!ageFilter.accept(fieldInput.next())) {
+              bs.clear(i);
+            }
+          }
+        } else {
+          int off = bs.nextSetBit(ageOff);
+          while (off < ageEnd && off >= 0) {
+            fieldInput.skipTo(off);
+            if (!ageFilter.accept(fieldInput.next())) {
+              bs.clear(off);
+            }
+            off = bs.nextSetBit(off + 1);
+          }
         }
       }
     }

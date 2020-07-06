@@ -77,12 +77,14 @@ public class SetFieldFilter implements FieldFilter {
 
   @Override
   public boolean accept(FieldRS field) {
+    InputVector keyVec = field.getKeyVector();
+    this.filter = new BitSet(keyVec.size());
+
     if (this.isAll) {
+      this.filter.set(0, keyVec.size());
       return true;
     }
 
-    InputVector keyVec = field.getKeyVector();
-    this.filter = new BitSet(keyVec.size());
     this.chunkValues = field.getValueVector();
 
     boolean bHit = false;
