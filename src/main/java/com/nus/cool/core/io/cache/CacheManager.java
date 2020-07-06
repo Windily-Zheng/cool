@@ -3,6 +3,7 @@ package com.nus.cool.core.io.cache;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.util.BitSet;
 import java.util.List;
@@ -27,6 +28,7 @@ public class CacheManager {
       double entryCacheLimit) {
     memoryStore = new MemoryStore(memoryCacheSize, entryCacheLimit);
     diskStore = new DiskStore(cacheRoot, diskCacheSize, entryCacheLimit);
+    toCacheBitsets = Maps.newHashMap();
     hitNum = 0;
     totalNum = 0;
   }
