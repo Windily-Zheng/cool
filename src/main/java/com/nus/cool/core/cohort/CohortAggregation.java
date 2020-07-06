@@ -120,7 +120,7 @@ public class CohortAggregation implements Operator {
   public void process(ChunkRS chunk, boolean reuse, CacheManager cacheManager, String storageLevel,
       String cubletFileName) throws IOException {
     this.sigma.process(chunk, reuse, cacheManager, storageLevel, cubletFileName);
-    if (!this.sigma.isBUserActiveChunk()) {
+    if (!this.sigma.isBUserActiveChunk() || !this.sigma.isBAgeActiveChunk()) {
       return;
     }
 
@@ -164,11 +164,12 @@ public class CohortAggregation implements Operator {
 //    System.out.println("*** Chunk ID: " + chunk.getChunkID() + " ***");
     chunkNum++;
 
-    // 1. Load chunk cache
+    // 1. Load: Load chunk cache
     Set<Integer> birthIDSet = new HashSet<>();
     Map<Integer, BitSet> cachedBirthBitsets = Maps.newLinkedHashMap();
     Map<String, Set<Integer>> ageIDSets = Maps.newLinkedHashMap();
     Map<String, Map<Integer, BitSet>> cachedAgeBitsets = Maps.newLinkedHashMap();
+    BitSet ageMatchedRows = new BitSet(chunk.getRecords());
 
     if (reuse) {
       // Construct birth action cacheKeys
@@ -224,7 +225,7 @@ public class CohortAggregation implements Operator {
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
       }
 
-      // 2. Generate missing bitsets
+      // 2. Generate: Generate missing bitsets
       // Generate missing birth bitsets
       if (cachedBirthBitsets.size() < birthIDSet.size()) {
 //        System.out.println("*** Caching missing Bitsets ***");
@@ -309,6 +310,22 @@ public class CohortAggregation implements Operator {
           cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
         }
       }
+
+      // 3. Filter: Search matched rows
+      Map<String, BitSet> fieldMatchedRows = Maps.newLinkedHashMap();
+      for (Map.Entry<String, Map<Integer, BitSet>> entry : cachedAgeBitsets.entrySet()) {
+        BitSet fieldBitset = new BitSet(chunk.getRecords());
+        Map<Integer, BitSet> cachedAgeFieldBitsets = entry.getValue();
+        for (Map.Entry<Integer, BitSet> en : cachedAgeFieldBitsets.entrySet()) {
+          fieldBitset.or(en.getValue());
+        }
+        fieldMatchedRows.put(entry.getKey(), fieldBitset);
+      }
+
+      ageMatchedRows.set(0, chunk.getRecords());
+      for (Map.Entry<String, BitSet> entry : fieldMatchedRows.entrySet()) {
+        ageMatchedRows.and(entry.getValue());
+      }
     }
 
     while (appInput.hasNext()) {
@@ -369,7 +386,13 @@ public class CohortAggregation implements Operator {
             int ageOff = birthOff + 1;
             if (ageOff < end) {
               bv.set(birthOff + 1, end);
-              this.sigma.selectAgeActivities(birthOff + 1, end, bv);
+              if (reuse) {
+                bv.and(ageMatchedRows);
+                this.sigma.selectAgeActivitiesUsingBitset(birthOff + 1, end, bv);
+              }
+              else {
+                this.sigma.selectAgeActivities(birthOff + 1, end, bv);
+              }
               if (!bv.isEmpty()) {
                 aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
               }

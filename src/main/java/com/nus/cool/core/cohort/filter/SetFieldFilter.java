@@ -77,12 +77,14 @@ public class SetFieldFilter implements FieldFilter {
 
   @Override
   public boolean accept(FieldRS field) {
-      if (this.isAll) {
-          return true;
-      }
-
     InputVector keyVec = field.getKeyVector();
     this.filter = new BitSet(keyVec.size());
+
+    if (this.isAll) {
+      this.filter.set(0, keyVec.size());
+      return true;
+    }
+
     this.chunkValues = field.getValueVector();
 
     boolean bHit = false;
@@ -90,9 +92,9 @@ public class SetFieldFilter implements FieldFilter {
       if (cubeId >= 0) {
         int tmp = keyVec.find(cubeId);
         bHit |= (tmp >= 0);
-          if (tmp >= 0) {
-              this.filter.set(tmp);
-          }
+        if (tmp >= 0) {
+          this.filter.set(tmp);
+        }
       }
     }
     return bHit || (this.values.isEmpty());
@@ -100,9 +102,9 @@ public class SetFieldFilter implements FieldFilter {
 
   @Override
   public boolean accept(int v) {
-      if (this.isAll) {
-          return true;
-      }
+    if (this.isAll) {
+      return true;
+    }
     return this.filter.get(v);
   }
 

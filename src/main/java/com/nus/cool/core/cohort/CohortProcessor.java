@@ -43,7 +43,7 @@ public class CohortProcessor {
       CohortAggregation gamma = new CohortAggregation(sigma);
       gamma.init(schema, query);
       gamma.process(metaChunk);
-      if (sigma.isBUserActiveCublet()) {
+      if (sigma.isBUserActiveCublet() && sigma.isBAgeActiveCublet()) {
         List<ChunkRS> dataChunks = cublet.getDataChunks();
         for (ChunkRS dataChunk : dataChunks) {
           String cubletFile = cublet.getFile();
