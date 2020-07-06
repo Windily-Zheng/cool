@@ -36,12 +36,12 @@ public class MemoryStore {
 //    System.out.println();
   }
 
-  public Map<Integer, BitSet> load(List<CacheKey> cacheKeys) {
-    Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+  public Map<CacheKey, BitSet> load(List<CacheKey> cacheKeys) {
+    Map<CacheKey, BitSet> cachedBitsets = Maps.newLinkedHashMap();
     for (CacheKey cacheKey : cacheKeys) {
       if (entries.containsKey(cacheKey)) {
         BitSet bitSet = entries.get(cacheKey);
-        cachedBitsets.put(cacheKey.getLocalID(), bitSet);
+        cachedBitsets.put(cacheKey, bitSet);
       }
     }
     return cachedBitsets;
