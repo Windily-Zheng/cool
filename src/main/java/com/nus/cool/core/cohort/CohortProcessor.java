@@ -25,7 +25,13 @@ public class CohortProcessor {
   public static double totalLoadTime = 0;
 
   // for testing
-  public static double totalCachingTime = 0;
+  public static double totalGenerateTime = 0;
+
+  // for testing
+  public static double totalFilterTime = 0;
+
+  // for testing
+  public static double totalSelectionTime = 0;
 
   // for testing
   public static int chunkNum = 0;
@@ -49,7 +55,7 @@ public class CohortProcessor {
           String cubletFile = cublet.getFile();
 
           // TODO: Need to get from query
-          boolean reuse = true;
+          boolean reuse = false;
           String storageLevel = "MEMORY_ONLY";
 
           gamma.process(dataChunk, reuse, cacheManager, storageLevel,
@@ -60,7 +66,9 @@ public class CohortProcessor {
         // for testing
         totalSeekTime += gamma.totalSeekTime;
         totalLoadTime += gamma.totalLoadTime;
-        totalCachingTime += gamma.totalCachingTime;
+        totalGenerateTime += gamma.totalGenerateTime;
+        totalFilterTime += gamma.totalFilterTime;
+        totalSelectionTime += gamma.totalSelectionTime;
         chunkNum += gamma.chunkNum;
       }
 //      if (tag) {

@@ -53,13 +53,13 @@ public class LocalLoader {
     TableSchema schema = TableSchema.read(new FileInputStream(new File(cubeRoot, "table.yaml")));
 //        File dimensionFile = new File(cubeRoot, "dim_test.csv");
 //        File dataFile = new File(cubeRoot, "test.csv");
-    File dimensionFile = new File(cubeRoot, "dim_500M.csv");
-    File dataFile = new File(cubeRoot, "data_500M.csv");
+    File dimensionFile = new File(cubeRoot, "dim_2.4G.csv");
+    File dataFile = new File(cubeRoot, "data_2.4G.csv");
     File outputDir = new File(cubeRoot, args[1]);
     int chunkSize = 10000000;
 
-    double memoryCacheSize = (double) 1 * 1024 * 1024 * 1024;
-    double diskCacheSize = (double) 10 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
+    double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
 
     cacheManager = new CacheManager(args[2], memoryCacheSize, diskCacheSize, 0.8);
 
