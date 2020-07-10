@@ -100,6 +100,7 @@ public class CohortAggregation implements Operator {
     totalLoadTime = 0;
     totalGenerateTime = 0;
     totalFilterTime = 0;
+    totalSelectionTime = 0;
     chunkNum = 0;
   }
 
@@ -171,11 +172,12 @@ public class CohortAggregation implements Operator {
     Map<Integer, BitSet> cachedBirthBitsets = Maps.newLinkedHashMap();
     Map<String, Set<Integer>> ageIDSets = Maps.newLinkedHashMap();
     Map<String, Map<Integer, BitSet>> cachedAgeBitsets = Maps.newLinkedHashMap();
-    BitSet ageMatchedRows = new BitSet(chunk.getRecords());
+//    BitSet ageMatchedRows = new BitSet(chunk.getRecords());
 
     if (reuse) {
+      long loadStart = System.nanoTime();
       // Construct birth action cacheKeys
-      long birthConstructStart = System.nanoTime();
+//      long birthConstructStart = System.nanoTime();
       List<CacheKey> birthCacheKeys = Lists.newArrayList();
       for (int id : this.bBirthActionChunkIDs) {
         // avoid duplicate cacheKey
@@ -186,23 +188,23 @@ public class CohortAggregation implements Operator {
           birthCacheKeys.add(cacheKey);
         }
       }
-      long birthConstructEnd = System.nanoTime();
-      long birthConstructTime = birthConstructEnd - birthConstructStart;
+//      long birthConstructEnd = System.nanoTime();
+//      long birthConstructTime = birthConstructEnd - birthConstructStart;
 //      System.out.println("Construct CacheKeys: " + birthConstructTime + "ns");
 
 //      System.out.println("*** Loading cached Bitsets ***");
       // Load birth action cache
-      long birthLoadStart = System.nanoTime();
+//      long birthLoadStart = System.nanoTime();
       Map<CacheKey, BitSet> loadBirthBitsets = cacheManager.load(birthCacheKeys, storageLevel);
       for (Map.Entry<CacheKey, BitSet> entry : loadBirthBitsets.entrySet()) {
         cachedBirthBitsets.put(entry.getKey().getLocalID(), entry.getValue());
       }
-      long birthLoadEnd = System.nanoTime();
-      long birthLoadTime = (birthLoadEnd - birthLoadStart);
+//      long birthLoadEnd = System.nanoTime();
+//      long birthLoadTime = (birthLoadEnd - birthLoadStart);
 //      System.out.println("Load chunk cache: " + birthLoadTime + "ns");
 
       // Construct age selection cacheKeys
-      long ageLoadStart = System.nanoTime();
+//      long ageLoadStart = System.nanoTime();
       Map<String, BitSet> ageFilterBitsets = this.sigma.getAgeFilterBitsets();
       for (Map.Entry<String, BitSet> entry : ageFilterBitsets.entrySet()) {
         List<CacheKey> ageCacheKeys = Lists.newArrayList();
@@ -225,15 +227,20 @@ public class CohortAggregation implements Operator {
         }
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
       }
-      long ageLoadEnd = System.nanoTime();
-      long ageLoadTime = (ageLoadEnd - ageLoadStart);
-      totalLoadTime += (birthConstructTime + birthLoadTime + ageLoadTime);
+      long loadEnd = System.nanoTime();
+      totalLoadTime += (loadEnd - loadStart);
+
+//      long ageLoadEnd = System.nanoTime();
+//      long ageLoadTime = (ageLoadEnd - ageLoadStart);
+//      totalLoadTime += (birthConstructTime + birthLoadTime + ageLoadTime);
 
       // 2. Generate: Generate missing bitsets
       // Generate missing birth bitsets
+
+      long generateStart = System.nanoTime();
       if (cachedBirthBitsets.size() < birthIDSet.size()) {
 //        System.out.println("*** Caching missing Bitsets ***");
-        long birthCheckStart = System.nanoTime();
+//        long birthCheckStart = System.nanoTime();
         Map<Integer, BitSet> toCacheBirthBitsets = Maps.newLinkedHashMap();
         // Check missing birth localIDs
         for (int id : birthIDSet) {
@@ -243,12 +250,12 @@ public class CohortAggregation implements Operator {
 //            System.out.println("Missing local ID: " + id);
           }
         }
-        long birthCheckEnd = System.nanoTime();
-        long birthCheckTime = birthCheckEnd - birthCheckStart;
+//        long birthCheckEnd = System.nanoTime();
+//        long birthCheckTime = birthCheckEnd - birthCheckStart;
 //        System.out.println("Check missed localIDs: " + birthCheckTime + "ns");
 
         // Traverse actionInput to generate missing birth bitsets
-        long birthTraverseStart = System.nanoTime();
+//        long birthTraverseStart = System.nanoTime();
         int pos = 0;
         actionInput.skipTo(pos);
         while (actionInput.hasNext()) {
@@ -258,12 +265,12 @@ public class CohortAggregation implements Operator {
           }
           pos++;
         }
-        long birthTraverseEnd = System.nanoTime();
-        long birthTraverseTime = birthTraverseEnd - birthTraverseStart;
+//        long birthTraverseEnd = System.nanoTime();
+//        long birthTraverseTime = birthTraverseEnd - birthTraverseStart;
 //        System.out.println("Traverse InputVector: " + birthTraverseTime + "ns");
 
         // Add missing birth bitsets to cache
-        long birthCachingStart = System.nanoTime();
+//        long birthCachingStart = System.nanoTime();
         for (Map.Entry<Integer, BitSet> entry : toCacheBirthBitsets.entrySet()) {
           CacheKey cacheKey = new CacheKey(cubletFileName, this.schema.getActionFieldName(),
               chunk.getChunkID(), entry.getKey());
@@ -271,14 +278,14 @@ public class CohortAggregation implements Operator {
           cacheManager.addToCacheBitsets(cacheKey, entry.getValue(), storageLevel);
           cachedBirthBitsets.put(entry.getKey(), entry.getValue());
         }
-        long birthCachingEnd = System.nanoTime();
-        long birthCachingTime = birthCachingEnd - birthCachingStart;
+//        long birthCachingEnd = System.nanoTime();
+//        long birthCachingTime = birthCachingEnd - birthCachingStart;
 //        System.out.println("Caching: " + birthCachingTime + "ns");
-        totalGenerateTime += (birthCheckTime + birthTraverseTime + birthCachingTime);
+//        totalGenerateTime += (birthCheckTime + birthTraverseTime + birthCachingTime);
       }
 
       // Generate missing age bitsets
-      long ageGenerateStart = System.nanoTime();
+//      long ageGenerateStart = System.nanoTime();
       for (Map.Entry<String, Set<Integer>> entry : ageIDSets.entrySet()) {
         Set<Integer> ageIDSet = entry.getValue();
         Map<Integer, BitSet> cachedAgeFieldBitsets = cachedAgeBitsets.get(entry.getKey());
@@ -315,11 +322,15 @@ public class CohortAggregation implements Operator {
           cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
         }
       }
-      long ageGenerateEnd = System.nanoTime();
-      long ageGenerateTime = ageGenerateEnd - ageGenerateStart;
-      totalGenerateTime += ageGenerateTime;
+      long generateEnd = System.nanoTime();
+      totalGenerateTime += (generateEnd - generateStart);
+
+//      long ageGenerateEnd = System.nanoTime();
+//      long ageGenerateTime = ageGenerateEnd - ageGenerateStart;
+//      totalGenerateTime += ageGenerateTime;
 
       // 3. Filter: Search matched rows
+//      long filterStart = System.nanoTime();
       long filterStart = System.nanoTime();
       Map<String, BitSet> fieldMatchedRows = Maps.newLinkedHashMap();
       for (Map.Entry<String, Map<Integer, BitSet>> entry : cachedAgeBitsets.entrySet()) {
@@ -331,13 +342,12 @@ public class CohortAggregation implements Operator {
         fieldMatchedRows.put(entry.getKey(), fieldBitset);
       }
 
-      ageMatchedRows.set(0, chunk.getRecords());
+      bv.set(0, chunk.getRecords());
       for (Map.Entry<String, BitSet> entry : fieldMatchedRows.entrySet()) {
-        ageMatchedRows.and(entry.getValue());
+        bv.and(entry.getValue());
       }
       long filterEnd = System.nanoTime();
-      long filterTime = filterEnd - filterStart;
-      totalFilterTime += filterTime;
+      totalFilterTime += (filterEnd - filterStart);
     }
 
     while (appInput.hasNext()) {
@@ -365,24 +375,14 @@ public class CohortAggregation implements Operator {
 
           int birthOff;
 
+          long seekStart = System.nanoTime();
           if (reuse) {
-            long seekStart = System.nanoTime();
             birthOff = seekToReuseBirthTuple(begin, end, cachedBirthBitsets);
-            long seekEnd = System.nanoTime();
-//            System.out.println("seekToReuseBirthTuple: " + (endTime - startTime) + "ns");
-            totalSeekTime += (seekEnd - seekStart);
-
-//            System.out.println("begin: " + begin);
-//            System.out.println("end: " + end);
-//            System.out.println("birthOff: " + birthOff);
-//            System.out.println();
           } else {
-            long seekStart = System.nanoTime();
             birthOff = seekToBirthTuple(begin, end, actionInput);
-            long seekEnd = System.nanoTime();
-//            System.out.println("seekToBirthTuple: " + (endTime - startTime) + "ns");
-            totalSeekTime += (seekEnd - seekStart);
           }
+          long seekEnd = System.nanoTime();
+          totalSeekTime += (seekEnd - seekStart);
 
           if (birthOff == end) {
             continue;
@@ -397,23 +397,20 @@ public class CohortAggregation implements Operator {
             int birthTime = actionTimeInput.next();
             int ageOff = birthOff + 1;
             if (ageOff < end) {
-              bv.set(birthOff + 1, end);
+              long selectionStart = System.nanoTime();
               if (reuse) {
-                bv.and(ageMatchedRows);
-                long selectionStart = System.nanoTime();
                 this.sigma.selectAgeActivitiesUsingBitset(birthOff + 1, end, bv);
-                long selectionEnd = System.nanoTime();
-                totalSelectionTime += (selectionEnd - selectionStart);
               } else {
-                long selectionStart = System.nanoTime();
+                bv.set(birthOff + 1, end);
                 this.sigma.selectAgeActivities(birthOff + 1, end, bv);
-                long selectionEnd = System.nanoTime();
-                totalSelectionTime += (selectionEnd - selectionStart);
               }
+              long selectionEnd = System.nanoTime();
+              totalSelectionTime += (selectionEnd - selectionStart);
               if (!bv.isEmpty()) {
                 aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
               }
-              bv.clear(birthOff + 1, end);
+//              bv.clear(birthOff + 1, end);
+              bv.clear(begin, end);
             }
           }
         }
