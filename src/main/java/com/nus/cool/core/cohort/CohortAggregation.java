@@ -473,12 +473,12 @@ public class CohortAggregation implements Operator {
   }
 
   private int seekToReuseBirthTuple(int begin, int end, Map<Integer, BitSet> bitSetList) {
-    int pos = begin;
+    int pos = begin - 1;
 
     for (int id : this.bBirthActionChunkIDs) {
       BitSet bitSet = bitSetList.get(id);
-      int newPos = bitSet.nextSetBit(pos);
-      if (newPos == -1 || newPos >= end) {
+      int newPos = bitSet.nextSetBit(pos + 1);
+      if (newPos < 0 || newPos >= end) {
         return end;
       }
       pos = newPos;

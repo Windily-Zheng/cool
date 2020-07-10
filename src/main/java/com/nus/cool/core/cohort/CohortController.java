@@ -58,6 +58,8 @@ public class CohortController {
 
     long cachingTime = 0;
     long queryTime = 0;
+//    int count = 1;
+
     for (CohortQuery query : queries) {
       long queryStart = System.nanoTime();
       List<ResultTuple> resultTuples = cohortProcessor
@@ -70,7 +72,6 @@ public class CohortController {
       long cachingEnd = System.nanoTime();
       cachingTime += (cachingEnd - cachingStart);
 
-//      int count = 0;
 //      QueryResult result = QueryResult.ok(resultTuples);
 //      System.out.println("Q[" + count + "]: ");
 //      System.out.println(result.toString());
