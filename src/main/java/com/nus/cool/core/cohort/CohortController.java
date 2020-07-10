@@ -56,39 +56,28 @@ public class CohortController {
 //      }
 //    }
 
-//    long totalTime = 0;
-//    int count = 0;
-
     long cachingTime = 0;
+    long queryTime = 0;
     for (CohortQuery query : queries) {
-//      long startTime = System.currentTimeMillis();
-//      long startTime = System.nanoTime();
-
+      long queryStart = System.nanoTime();
       List<ResultTuple> resultTuples = cohortProcessor
           .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
+      long queryEnd = System.nanoTime();
+      queryTime += (queryEnd - queryStart);
 
       long cachingStart = System.nanoTime();
       cacheManager.caching();
       long cachingEnd = System.nanoTime();
       cachingTime += (cachingEnd - cachingStart);
 
-//      long endTime = System.currentTimeMillis();
-//      long endTime = System.nanoTime();
-//      long queryTime = endTime - startTime;
-//      totalTime += queryTime;
-//      count++;
-//      System.out.println("Q[" + count + "]: " + queryTime + " ns");
-//      System.out.println("Q[" + count + "]: " + queryTime + " ms");
-
+//      int count = 0;
 //      QueryResult result = QueryResult.ok(resultTuples);
+//      System.out.println("Q[" + count + "]: ");
 //      System.out.println(result.toString());
+//      count++;
     }
 
-//    System.out.println("Total time: " + totalTime + " ns");
-//    System.out.print("Average time: " + totalTime * 1.0 / count + " ns => ");
-//    System.out.printf("%.3f ms\n", totalTime * 1.0 / count / 1000000);
-//    System.out.println("Total time: " + totalTime + " ms");
-//    System.out.println("Average time: " + totalTime * 1.0 / count + " ms");
+    double aveQueryTime = queryTime / queries.size();
     double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
     double aveSelectionTime = CohortProcessor.totalSelectionTime / queries.size();
     double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
@@ -96,6 +85,8 @@ public class CohortController {
     double aveFilterTime = CohortProcessor.totalFilterTime / queries.size();
     double aveCachingTime = cachingTime / queries.size();
 
+    System.out
+        .printf("Average Query Time: %.2f ns => %.3f ms\n", aveQueryTime, aveQueryTime / 1000000);
     System.out
         .printf("Average Seek Time: %.2f ns => %.3f ms\n", aveSeekTime, aveSeekTime / 1000000);
     System.out.printf("Average Age Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
