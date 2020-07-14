@@ -23,7 +23,7 @@ public class CohortController {
 
     cohortLoader = new CohortLoader();
 
-    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 0.78 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
 
     cacheManager = new CacheManager(args[0] + "/" + args[2], memoryCacheSize, diskCacheSize,

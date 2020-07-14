@@ -38,11 +38,18 @@ public class CacheManager {
 
   public void put(CacheKey cacheKey, BitSet bitSet, String storageLevel) throws IOException {
     checkNotNull(storageLevel);
-    // TODO: Need to add "MEMORY_AND_DISK" (receive uncached entries from memoryStore and put them into diskStore)
     if ("MEMORY_ONLY".equals(storageLevel)) {
       memoryStore.put(cacheKey, bitSet);
     } else if ("DISK_ONLY".equals(storageLevel)) {
       diskStore.put(cacheKey, bitSet);
+    } else if ("MEMORY_AND_DISK".equals(storageLevel)) {
+      Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(cacheKey, bitSet);
+      if (evictedBitsets.size() > 0) {
+        System.out.println("Putting " + evictedBitsets.size() + " bitsets into disk cache");
+        for (Map.Entry<CacheKey, BitSet> entry : evictedBitsets.entrySet()) {
+          diskStore.put(entry.getKey(), entry.getValue());
+        }
+      }
     } else {
       throw new IllegalArgumentException("Illegal storageLevel: " + storageLevel);
     }
@@ -62,6 +69,8 @@ public class CacheManager {
       return cachedBitsets;
     } else if ("MEMORY_AND_DISK".equals(storageLevel)) {
       Map<CacheKey, BitSet> cachedBitsets = memoryStore.load(cacheKeys);
+      // Only count the hit number of memory cache
+      hitNum += cachedBitsets.size();
       if (cachedBitsets.size() < cacheKeys.size()) {
         List<CacheKey> missingCacheKeys = Lists.newArrayList();
         for (CacheKey cacheKey : cacheKeys) {
@@ -72,9 +81,16 @@ public class CacheManager {
         Map<CacheKey, BitSet> diskCachedBitsets = diskStore.load(missingCacheKeys);
         for (Map.Entry<CacheKey, BitSet> entry : diskCachedBitsets.entrySet()) {
           cachedBitsets.put(entry.getKey(), entry.getValue());
+          // Put missing entries into memory cache
+          Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(entry.getKey(), entry.getValue());
+          if (evictedBitsets.size() > 0) {
+            for (Map.Entry<CacheKey, BitSet> en : evictedBitsets.entrySet()) {
+              diskStore.put(en.getKey(), en.getValue());
+            }
+          }
         }
       }
-      hitNum += cachedBitsets.size();
+//      hitNum += cachedBitsets.size();
       return cachedBitsets;
     } else {
       throw new IllegalArgumentException("Illegal storageLevel: " + storageLevel);
@@ -102,8 +118,12 @@ public class CacheManager {
           "Size of cacheKeys(" + cacheKeys.size() + ") is not equal to size of diskCachedBitsets("
               + diskCachedBitsets.size() + ")");
     }
+    Map<CacheKey, BitSet> evictedBitsets;
     for (Map.Entry<CacheKey, BitSet> entry : diskCachedBitsets.entrySet()) {
-      memoryStore.put(entry.getKey(), entry.getValue());
+      evictedBitsets = memoryStore.put(entry.getKey(), entry.getValue());
+      if (evictedBitsets.size() > 0) {
+        break;
+      }
     }
   }
 }
