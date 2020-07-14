@@ -16,7 +16,7 @@ public class MemoryStore {
 
   private double usedMemorySize; // bits
 
-  private Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
+  public Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
 
   public MemoryStore(double memoryCacheSize, double entryCacheLimit) {
     if (memoryCacheSize <= 0) {
@@ -30,10 +30,6 @@ public class MemoryStore {
     this.entryCacheLimit = entryCacheLimit * memoryCacheSize * 8; // percentage => bits
 
     this.usedMemorySize = 0;
-
-//    System.out.println("memoryCacheSize: " + this.memoryCacheSize + " bits");
-//    System.out.println("entryCacheLimit: " + this.entryCacheLimit + " bits");
-//    System.out.println();
   }
 
   public Map<CacheKey, BitSet> load(List<CacheKey> cacheKeys) {
@@ -47,38 +43,37 @@ public class MemoryStore {
     return cachedBitsets;
   }
 
-  public void put(CacheKey cacheKey, BitSet bitSet) {
+  public Map<CacheKey, BitSet> put(CacheKey cacheKey, BitSet bitSet) {
+    Map<CacheKey, BitSet> evictedBitsets = Maps.newLinkedHashMap();
+
+    if (entries.containsKey(cacheKey)) {
+      return evictedBitsets;
+    }
+
     if (bitSet.size() >= entryCacheLimit) {
       System.out.println(
           "Exceed entryCacheLimit! CacheKey(" + cacheKey.toString() + ") not cached in memory!");
-      return;
+      evictedBitsets.put(cacheKey, bitSet);
+      return evictedBitsets;
     }
 
     if (usedMemorySize + bitSet.size() > memoryCacheSize) {
-      evict(usedMemorySize + bitSet.size() - memoryCacheSize);
+      evictedBitsets = evict(usedMemorySize + bitSet.size() - memoryCacheSize);
     }
 
     entries.put(cacheKey, bitSet);
     usedMemorySize += bitSet.size();
-
-//    System.out.println(
-//        "Caching Bitset: CacheKey(" + cacheKey.toString() + ") size: " + bitSet.size() + " bits");
-//    System.out.println("usedMemorySize: " + usedMemorySize);
+    return evictedBitsets;
   }
 
-  private void evict(double size) {
-    // TODO: Need to evict to disk cache (MEMORY_AND_DISK)
-    System.out.println("*** Evicting ***");
-    System.out.println("Bits needed to free: " + size);
-
+  private Map<CacheKey, BitSet> evict(double size) {
     int freeSize = 0;
+    Map<CacheKey, BitSet> evictedBitsets = Maps.newLinkedHashMap();
+
     // LRU
     for (Iterator<Entry<CacheKey, BitSet>> it = entries.entrySet().iterator(); it.hasNext(); ) {
       Map.Entry<CacheKey, BitSet> entry = it.next();
-//      CacheKey cacheKey = entry.getKey();
-//      System.out.println(
-//          "Evict Bitset: CacheKey(" + cacheKey.toString() + ") size: " + entry.getValue().size()
-//              + " bits");
+      evictedBitsets.put(entry.getKey(), entry.getValue());
       freeSize += entry.getValue().size();
       it.remove();
       if (freeSize >= size) {
@@ -86,8 +81,6 @@ public class MemoryStore {
       }
     }
     usedMemorySize -= freeSize;
-
-//    System.out.println("Total free size: " + freeSize + " bits");
-//    System.out.println();
+    return evictedBitsets;
   }
 }

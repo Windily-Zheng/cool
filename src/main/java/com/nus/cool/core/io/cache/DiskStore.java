@@ -49,13 +49,7 @@ public class DiskStore {
 
     this.usedDiskSize = 0;
 
-//    System.out.println("diskCacheSize: " + this.diskCacheSize);
-//    System.out.println("entryCacheLimit: " + this.entryCacheLimit);
-//    System.out.println("*** Initialize disk cache ***");
-
     init();
-//    System.out.println("usedDiskSize: " + usedDiskSize);
-//    System.out.println();
   }
 
   private void init() {
@@ -71,7 +65,6 @@ public class DiskStore {
       int blockSize = (int) cacheFile.length();
       blockSizes.put(cacheKey, blockSize);
       usedDiskSize += blockSize;
-//      System.out.println("CacheKey(" + cacheKey.toString() + ") Size: " + blockSize);
     }
     if (usedDiskSize > diskCacheSize) {
       evict(usedDiskSize - diskCacheSize);
@@ -95,10 +88,12 @@ public class DiskStore {
   }
 
   public void put(CacheKey cacheKey, BitSet bitSet) throws IOException {
+    if (blockSizes.containsKey(cacheKey)) {
+      return;
+    }
     File cacheFile = new File(cacheRoot, cacheKey.getFileName());
     DataOutputStream out = new DataOutputStream(new FileOutputStream(cacheFile));
     int bytesWritten = SimpleBitSetCompressor.compress(bitSet, out);
-//    System.out.println("bytesWritten: " + bytesWritten);
 
     if (bytesWritten >= entryCacheLimit) {
       cacheFile.delete();
@@ -116,10 +111,6 @@ public class DiskStore {
   }
 
   private void evict(double size) {
-    System.out.println("*** Evicting ***");
-    System.out.println("usedDiskSize: " + usedDiskSize);
-    System.out.println("Space needed to free: " + size);
-
     int freeSize = 0;
     // LRU
     for (Iterator<Entry<CacheKey, Integer>> it = blockSizes.entrySet().iterator(); it.hasNext(); ) {
@@ -127,8 +118,6 @@ public class DiskStore {
       CacheKey cacheKey = entry.getKey();
       File cacheFile = new File(cacheRoot, cacheKey.getFileName());
       if (cacheFile.exists()) {
-//        System.out
-//            .println("Evict file: " + cacheKey.getFileName() + " (size: " + entry.getValue() + ")");
         cacheFile.delete();
       }
       freeSize += entry.getValue();
@@ -138,9 +127,6 @@ public class DiskStore {
       }
     }
     usedDiskSize -= freeSize;
-
-//    System.out.println("Total free size: " + freeSize);
-//    System.out.println();
   }
 
   public Set<CacheKey> getCachedKeys() {

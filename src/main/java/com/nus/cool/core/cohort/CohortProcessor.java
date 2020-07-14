@@ -56,7 +56,7 @@ public class CohortProcessor {
 
           // TODO: Need to get from query
           boolean reuse = true;
-          String storageLevel = "MEMORY_ONLY";
+          String storageLevel = "MEMORY_AND_DISK";
 
           gamma.process(dataChunk, reuse, cacheManager, storageLevel,
               cubletFile.substring(0, cubletFile.length() - 3));
