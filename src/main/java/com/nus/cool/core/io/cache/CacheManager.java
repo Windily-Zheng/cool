@@ -45,7 +45,7 @@ public class CacheManager {
     } else if ("MEMORY_AND_DISK".equals(storageLevel)) {
       Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(cacheKey, bitSet);
       if (evictedBitsets.size() > 0) {
-        System.out.println("Putting " + evictedBitsets.size() + " bitsets into disk cache");
+        // Put evicted bitsets into disk cache
         for (Map.Entry<CacheKey, BitSet> entry : evictedBitsets.entrySet()) {
           diskStore.put(entry.getKey(), entry.getValue());
         }
@@ -78,12 +78,14 @@ public class CacheManager {
             missingCacheKeys.add(cacheKey);
           }
         }
+        // Load missing entries from disk cache
         Map<CacheKey, BitSet> diskCachedBitsets = diskStore.load(missingCacheKeys);
         for (Map.Entry<CacheKey, BitSet> entry : diskCachedBitsets.entrySet()) {
           cachedBitsets.put(entry.getKey(), entry.getValue());
           // Put missing entries into memory cache
           Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(entry.getKey(), entry.getValue());
           if (evictedBitsets.size() > 0) {
+            // Put evicted bitsets into disk cache
             for (Map.Entry<CacheKey, BitSet> en : evictedBitsets.entrySet()) {
               diskStore.put(en.getKey(), en.getValue());
             }
