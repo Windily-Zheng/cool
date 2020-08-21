@@ -23,7 +23,7 @@ public class CohortController {
 
     cohortLoader = new CohortLoader();
 
-    double memoryCacheSize = (double) 1 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
 
     cacheManager = new CacheManager(args[0] + "/" + args[2], memoryCacheSize, diskCacheSize,
@@ -67,6 +67,9 @@ public class CohortController {
       long queryEnd = System.nanoTime();
       queryTime += (queryEnd - queryStart);
 
+//      System.out.println("Q[" + count + "]: ");
+//      System.out.printf("%.3f ms\n", (double)(queryEnd - queryStart) / 1000000);
+
       long cachingStart = System.nanoTime();
       cacheManager.caching();
       long cachingEnd = System.nanoTime();
@@ -79,27 +82,33 @@ public class CohortController {
     }
 
     double aveQueryTime = queryTime / queries.size();
-    double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
-    double aveSelectionTime = CohortProcessor.totalSelectionTime / queries.size();
-    double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
-    double aveGenerateTime = CohortProcessor.totalGenerateTime / queries.size();
+//    double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
+//    double aveSelectionTime = CohortProcessor.totalSelectionTime / queries.size();
+//    double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
+//    double aveGenerateTime = CohortProcessor.totalGenerateTime / queries.size();
     double aveFilterTime = CohortProcessor.totalFilterTime / queries.size();
-    double aveCachingTime = cachingTime / queries.size();
+//    double aveCachingTime = cachingTime / queries.size();
+    double aveSelectionTime = CohortProcessor.totalSeekTime + CohortProcessor.totalSelectionTime / queries.size();
+    double aveAggregationTime = CohortProcessor.totalAggregationTime / queries.size();
 
     System.out
         .printf("Average Query Time: %.2f ns => %.3f ms\n", aveQueryTime, aveQueryTime / 1000000);
-    System.out
-        .printf("Average Seek Time: %.2f ns => %.3f ms\n", aveSeekTime, aveSeekTime / 1000000);
-    System.out.printf("Average Age Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
-        aveSelectionTime / 1000000);
-    System.out
-        .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
-    System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
-        aveGenerateTime / 1000000);
+//    System.out
+//        .printf("Average Seek Time: %.2f ns => %.3f ms\n", aveSeekTime, aveSeekTime / 1000000);
+//    System.out.printf("Average Age Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
+//        aveSelectionTime / 1000000);
+//    System.out
+//        .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
+//    System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
+//        aveGenerateTime / 1000000);
     System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
         aveFilterTime / 1000000);
-    System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
-        aveCachingTime / 1000000);
+//    System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
+//        aveCachingTime / 1000000);
+    System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
+        aveSelectionTime / 1000000);
+    System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
+        aveAggregationTime / 1000000);
     System.out
         .printf("Hit rate: %.2f%%\n", CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     coolModel.close();

@@ -65,6 +65,10 @@ public class CohortLoader {
       queries.add(query);
     }
 
+//    String fileName = queryRoot + "q2.json";
+//    CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+//    queries.add(query);
+
 //    CohortQuery query1 = new CohortQuery();
 //    query1.setDataSource("sogamo");
 //    query1.setAgeInterval(1);

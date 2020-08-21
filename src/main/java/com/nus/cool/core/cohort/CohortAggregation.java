@@ -82,6 +82,9 @@ public class CohortAggregation implements Operator {
   public double totalSelectionTime;
 
   // for testing
+  public double totalAggregationTime;
+
+  // for testing
   public int chunkNum;
 
   public CohortAggregation(CohortSelection sigma) {
@@ -101,6 +104,7 @@ public class CohortAggregation implements Operator {
     totalGenerateTime = 0;
     totalFilterTime = 0;
     totalSelectionTime = 0;
+    totalAggregationTime = 0;
     chunkNum = 0;
   }
 
@@ -406,9 +410,12 @@ public class CohortAggregation implements Operator {
               }
               long selectionEnd = System.nanoTime();
               totalSelectionTime += (selectionEnd - selectionStart);
+              long aggregationStart = System.nanoTime();
               if (!bv.isEmpty()) {
                 aggregator.processUser(bv, birthTime, birthOff + 1, end, chunkResults[cohort]);
               }
+              long aggregationEnd = System.nanoTime();
+              totalAggregationTime += (aggregationEnd - aggregationStart);
 //              bv.clear(birthOff + 1, end);
               bv.clear(begin, end);
             }
@@ -417,6 +424,7 @@ public class CohortAggregation implements Operator {
       }
     }
 
+    long aggregationStart = System.nanoTime();
     InputVector keyVector = null;
     if (cohortField.isSetField()) {
       keyVector = cohortField.getKeyVector();
@@ -436,6 +444,8 @@ public class CohortAggregation implements Operator {
         }
       }
     }
+    long aggregationEnd = System.nanoTime();
+    totalAggregationTime += (aggregationEnd - aggregationStart);
   }
 
   private synchronized FieldRS loadField(ChunkRS chunk, int fieldId) {
