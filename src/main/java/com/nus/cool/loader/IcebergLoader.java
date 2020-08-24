@@ -16,23 +16,11 @@
 package com.nus.cool.loader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nus.cool.core.cohort.QueryResult;
-import com.nus.cool.core.iceberg.query.Aggregation;
-import com.nus.cool.core.iceberg.query.IcebergAggregation;
+import com.google.common.collect.Lists;
 import com.nus.cool.core.iceberg.query.IcebergQuery;
-import com.nus.cool.core.iceberg.query.IcebergSelection;
-import com.nus.cool.core.iceberg.result.BaseResult;
-import com.nus.cool.core.io.readstore.ChunkRS;
-import com.nus.cool.core.io.readstore.CubeRS;
-import com.nus.cool.core.io.readstore.CubletRS;
-import com.nus.cool.core.io.readstore.MetaChunkRS;
-import com.nus.cool.core.schema.TableSchema;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author hongbin
@@ -41,75 +29,34 @@ import java.util.Map;
  */
 public class IcebergLoader {
 
-  private static CoolModel coolModel;
+//  public static QueryResult wrapResult(CubeRS cube, IcebergQuery query) {
+//    try {
+//      List<BaseResult> results = executeQuery(cube, query);
+//      return QueryResult.ok(results);
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
+//    return null;
+//  }
 
-  public static List<BaseResult> executeQuery(CubeRS cube, IcebergQuery query) throws Exception {
-
-    List<CubletRS> cublets = cube.getCublets();
-    TableSchema tableSchema = cube.getSchema();
-    List<BaseResult> results = new ArrayList<>();
-
-    IcebergSelection selection = new IcebergSelection();
-    selection.init(tableSchema, query);
-    for (CubletRS cubletRS : cublets) {
-      MetaChunkRS metaChunk = cubletRS.getMetaChunk();
-      selection.process(metaChunk);
-      if (selection.isbActivateCublet()) {
-        List<ChunkRS> datachunks = cubletRS.getDataChunks();
-        List<BitSet> bitSets = cubletRS.getBitSets();
-        for (int i = 0; i < datachunks.size(); i++) {
-          ChunkRS dataChunk = datachunks.get(i);
-          BitSet bitSet;
-          if (i >= bitSets.size()) {
-            bitSet = new BitSet();
-            bitSet.set(0, dataChunk.getRecords());
-          } else {
-            bitSet = bitSets.get(i);
-          }
-          if (bitSet.cardinality() == 0) {
-            continue;
-          }
-          Map<String, BitSet> map = selection.process(dataChunk, bitSet);
-          if (map == null) {
-            continue;
-          }
-          for (Map.Entry<String, BitSet> entry : map.entrySet()) {
-            String timeRange = entry.getKey();
-            BitSet bs = entry.getValue();
-            IcebergAggregation icebergAggregation = new IcebergAggregation();
-            icebergAggregation.init(bs, query.getGroupFields(), metaChunk, dataChunk, timeRange);
-            for (Aggregation aggregation : query.getAggregations()) {
-              List<BaseResult> res = icebergAggregation.process(aggregation);
-              results.addAll(res);
-            }
-          }
-        }
-      }
-    }
-    results = BaseResult.merge(results);
-    return results;
-  }
-
-  public static QueryResult wrapResult(CubeRS cube, IcebergQuery query) {
-    try {
-      List<BaseResult> results = executeQuery(cube, query);
-      return QueryResult.ok(results);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return null;
-  }
-
-  public static void main(String[] args) throws IOException {
-
-    coolModel = new CoolModel(args[0]);
-    coolModel.reload(args[1]);
-
+  public List<IcebergQuery> load() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
+    List<IcebergQuery> queries = Lists.newArrayList();
 
-    IcebergQuery query = mapper.readValue(new File("/Users/zhiyi/Desktop/Cool/cool/query/iceberg-query.json"), IcebergQuery.class);
+    String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/query/";
+//    String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/query/";
 
-    QueryResult result = wrapResult(coolModel.getCube(query.getDataSource()), query);
-    System.out.println(result.toString());
+//    for (int i = 1; i <= 10; i++) {
+//      String fileName = queryRoot + "query" + i + ".json";
+//      IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
+//      queries.add(query);
+//    }
+
+    String fileName = queryRoot + "iceberg-query.json";
+    IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
+    queries.add(query);
+
+    return queries;
+//    QueryResult result = wrapResult(coolModel.getCube(query.getDataSource()), query);
   }
 }
