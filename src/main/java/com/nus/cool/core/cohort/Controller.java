@@ -44,9 +44,11 @@ public class Controller {
 
       for (IcebergQuery query : queries) {
         List<BaseResult> results = icebergProcessor
-            .executeQuery(coolModel.getCube(query.getDataSource()), query);
+            .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
         QueryResult result = QueryResult.ok(results);
         System.out.println(result.toString());
+
+        cacheManager.caching();
       }
 
     } else if ("Cohort".equals(queryType)) {

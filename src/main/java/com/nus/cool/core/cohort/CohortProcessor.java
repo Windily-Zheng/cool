@@ -41,6 +41,10 @@ public class CohortProcessor {
 
   public List<ResultTuple> executeQuery(CubeRS cube, CohortQuery query, CacheManager cacheManager)
       throws IOException {
+    // TODO: Need to get from query
+    boolean reuse = false;
+    String storageLevel = "MEMORY_ONLY";
+
     List<CubletRS> cublets = cube.getCublets();
     TableSchema schema = cube.getSchema();
     List<ResultTuple> resultSet = Lists.newArrayList();
@@ -54,13 +58,8 @@ public class CohortProcessor {
       gamma.process(metaChunk);
       if (sigma.isBUserActiveCublet() && sigma.isBAgeActiveCublet()) {
         List<ChunkRS> dataChunks = cublet.getDataChunks();
+        String cubletFile = cublet.getFile();
         for (ChunkRS dataChunk : dataChunks) {
-          String cubletFile = cublet.getFile();
-
-          // TODO: Need to get from query
-          boolean reuse = false;
-          String storageLevel = "MEMORY_ONLY";
-
           gamma.process(dataChunk, reuse, cacheManager, storageLevel,
               cubletFile.substring(0, cubletFile.length() - 3));
           bitSets.add(gamma.getBs());

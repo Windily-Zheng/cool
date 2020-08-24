@@ -17,8 +17,13 @@ package com.nus.cool.core.iceberg.query;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.filter.FieldFilter;
 import com.nus.cool.core.cohort.filter.FieldFilterFactory;
+import com.nus.cool.core.cohort.filter.SetFieldFilter;
+import com.nus.cool.core.io.cache.CacheKey;
+import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
 import com.nus.cool.core.io.readstore.FieldRS;
 import com.nus.cool.core.io.readstore.MetaChunkRS;
@@ -27,6 +32,7 @@ import com.nus.cool.core.io.storevector.InputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import com.nus.cool.core.util.converter.DayIntConverter;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -34,8 +40,10 @@ import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author hongbin
@@ -210,7 +218,8 @@ public class IcebergSelection {
     }
   }
 
-  private BitSet select(SelectionFilter selectionFilter, ChunkRS chunk, BitSet bv) {
+  private BitSet select(SelectionFilter selectionFilter, ChunkRS chunk, BitSet bv, boolean reuse,
+      CacheManager cacheManager, String storageLevel, String cubletFileName) throws IOException {
     BitSet bs = (BitSet) bv.clone();
     if (selectionFilter == null) {
       return bs;
@@ -219,24 +228,82 @@ public class IcebergSelection {
       FieldRS field = chunk.getField(this.tableSchema.getFieldID(selectionFilter.getDimension()));
       InputVector keyVector = field.getKeyVector();
       BitSet[] bitSets = field.getBitSets();
-      if (field.isPreCal()) {
-        List<String> values = selectionFilter.getFilter().getValues();
-        for (String value : values) {
-          int gId = this.metaChunk.getMetaField(selectionFilter.getDimension()).find(value);
-          int localId = keyVector.find(gId);
-          bs.or(bitSets[localId]);
+      if (reuse && field.isSetField() && field.isPreCal()) {
+        FieldFilter fieldFilter = selectionFilter.getFilter();
+        BitSet filterBitset = ((SetFieldFilter)fieldFilter).getFilter();
+        String dimension = selectionFilter.getDimension();
+
+        // Construct cache keys
+        List<CacheKey> cacheKeys = Lists.newArrayList();
+        Set<Integer> localIDSet = new HashSet<>();
+        int pos = 0;
+        pos = filterBitset.nextSetBit(pos);
+        while (pos >= 0) {
+          localIDSet.add(pos);
+          CacheKey cacheKey = new CacheKey(cubletFileName, dimension, chunk.getChunkID(), pos);
+          cacheKeys.add(cacheKey);
+          pos = filterBitset.nextSetBit(pos + 1);
         }
+
+        // 1. Load: Load cache
+        Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+        Map<CacheKey, BitSet> loadBitsets = cacheManager.load(cacheKeys, storageLevel);
+        for (Map.Entry<CacheKey, BitSet> entry : loadBitsets.entrySet()) {
+          cachedBitsets.put(entry.getKey().getLocalID(), entry.getValue());
+        }
+
+        // 2. Generate: Generate missing bitsets
+        if (cachedBitsets.size() < localIDSet.size()) {
+          Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
+          // Check missing localIDs
+          for (int id : localIDSet) {
+            if (!cachedBitsets.containsKey(id)) {
+              BitSet bitSet = new BitSet(chunk.getRecords());
+              toCacheBitsets.put(id, bitSet);
+            }
+          }
+          // Traverse InputVector to generate missing bitsets
+          InputVector fieldIn = field.getValueVector();
+          int off = 0;
+          fieldIn.skipTo(off);
+          while (fieldIn.hasNext()) {
+            int key = fieldIn.next();
+            if (toCacheBitsets.containsKey(key)) {
+              toCacheBitsets.get(key).set(off);
+            }
+            off++;
+          }
+          // Add missing bitsets to cache
+          for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
+            CacheKey cacheKey = new CacheKey(cubletFileName, dimension, chunk.getChunkID(), entry.getKey());
+            cacheManager.addToCacheBitsets(cacheKey, entry.getValue(), storageLevel);
+            cachedBitsets.put(entry.getKey(), entry.getValue());
+          }
+        }
+
+        // 3. Filter: Search matched rows
+        for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
+            bs.or(entry.getValue());
+        }
+
+//        List<String> values = selectionFilter.getFilter().getValues();
+//        for (String value : values) {
+//          int gId = this.metaChunk.getMetaField(selectionFilter.getDimension()).find(value);
+//          int localId = keyVector.find(gId);
+//          bs.or(bitSets[localId]);
+//        }
       } else {
         selectFields(bs, field, selectionFilter.getFilter());
       }
     } else if (selectionFilter.getType().equals(SelectionQuery.SelectionType.and)) {
       for (SelectionFilter childFilter : selectionFilter.getFields()) {
-        bs = select(childFilter, chunk, bs);
+        bs = select(childFilter, chunk, bs, reuse, cacheManager, storageLevel, cubletFileName);
       }
     } else if (selectionFilter.getType().equals(SelectionQuery.SelectionType.or)) {
       List<BitSet> bitSets = new ArrayList<>();
       for (SelectionFilter childFilter : selectionFilter.getFields()) {
-        bitSets.add(select(childFilter, chunk, bs));
+        bitSets
+            .add(select(childFilter, chunk, bs, reuse, cacheManager, storageLevel, cubletFileName));
       }
       bs = orBitSets(bitSets);
     }
@@ -284,7 +351,8 @@ public class IcebergSelection {
         && process(this.filter, metaChunk);
   }
 
-  public Map<String, BitSet> process(ChunkRS chunk, BitSet bitSet) {
+  public Map<String, BitSet> process(ChunkRS chunk, BitSet bitSet, boolean reuse,
+      CacheManager cacheManager, String storageLevel, String cubletFileName) throws IOException {
 //    System.out.println("cardinality: " + bitSet.cardinality());
     FieldRS timeField = chunk.getField(this.tableSchema.getActionTimeField());
     int minKey = timeField.minKey();
@@ -340,7 +408,8 @@ public class IcebergSelection {
       }
     }
     for (Map.Entry<String, BitSet> entry : map.entrySet()) {
-      BitSet bs = select(this.filter, chunk, entry.getValue());
+      BitSet bs = select(this.filter, chunk, entry.getValue(), reuse, cacheManager, storageLevel,
+          cubletFileName);
       map.put(entry.getKey(), bs);
     }
     return map;
