@@ -285,7 +285,7 @@ public class IcebergSelection {
   }
 
   public Map<String, BitSet> process(ChunkRS chunk, BitSet bitSet) {
-    System.out.println("cardinality: " + bitSet.cardinality());
+//    System.out.println("cardinality: " + bitSet.cardinality());
     FieldRS timeField = chunk.getField(this.tableSchema.getActionTimeField());
     int minKey = timeField.minKey();
     int maxKey = timeField.maxKey();
