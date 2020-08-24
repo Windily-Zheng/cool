@@ -107,8 +107,9 @@ public class IcebergLoader {
 
     ObjectMapper mapper = new ObjectMapper();
 
-    IcebergQuery query = mapper.readValue(new File("fake-data-query.json"), IcebergQuery.class);
+    IcebergQuery query = mapper.readValue(new File("/Users/zhiyi/Desktop/Cool/cool/query/iceberg-query.json"), IcebergQuery.class);
 
     QueryResult result = wrapResult(coolModel.getCube(query.getDataSource()), query);
+    System.out.println(result.toString());
   }
 }

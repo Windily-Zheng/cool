@@ -21,6 +21,16 @@ public class CohortController {
     coolModel = new CoolModel(args[0]);
     coolModel.reload(args[1]);
 
+//    // TODO: Need to get from query
+//    String queryType = "Iceberg";
+//
+//    if ("Iceberg".equals(queryType)) {
+//
+//    }
+//    else if ("Cohort".equals(queryType)) {
+//
+//    }
+
     cohortLoader = new CohortLoader();
 
     double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;

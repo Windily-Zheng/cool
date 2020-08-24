@@ -54,6 +54,8 @@ public class CoolFieldRS implements FieldRS {
 
   private boolean bSetField;
 
+  private boolean preCal;
+
   private int minKey;
 
   private int maxKey;
@@ -93,16 +95,22 @@ public class CoolFieldRS implements FieldRS {
     }
 
     codec = Codec.fromInteger(buffer.get());
-//    if (codec == Codec.PreCAL) {
-//      int values = buffer.get();
-//      this.bitSets = new BitSet[values];
-//        for (int i = 0; i < values; i++) {
-//            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
-//        }
-//    } else {
+    if (codec == Codec.PreCAL) {
+      this.preCal = true;
+      int values = buffer.get();
+      this.bitSets = new BitSet[values];
+      for (int i = 0; i < values; i++) {
+        this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
+      }
+    } else {
       buffer.position(buffer.position() - 1);
       this.valueVec = InputVectorFactory.readFrom(buffer);
-//    }
+    }
+  }
+
+  @Override
+  public FieldType getFieldType() {
+    return this.fieldType;
   }
 
   @Override
@@ -131,6 +139,16 @@ public class CoolFieldRS implements FieldRS {
   }
 
   @Override
+  public boolean isPreCal() {
+    return this.preCal;
+  }
+
+  @Override
+  public BitSet[] getBitSets() {
+    return this.bitSets;
+  }
+
+  @Override
   public void readFromWithFieldType(ByteBuffer buffer, FieldType fieldType) {
     this.fieldType = fieldType;
     Codec codec = Codec.fromInteger(buffer.get());
@@ -149,15 +167,15 @@ public class CoolFieldRS implements FieldRS {
     }
 
     codec = Codec.fromInteger(buffer.get());
-//    if (codec == Codec.PreCAL) {
-//      int values = buffer.get();
-//      this.bitSets = new BitSet[values];
-//        for (int i = 0; i < values; i++) {
-//            this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
-//        }
-//    } else {
+    if (codec == Codec.PreCAL) {
+      int values = buffer.get();
+      this.bitSets = new BitSet[values];
+      for (int i = 0; i < values; i++) {
+        this.bitSets[i] = SimpleBitSetCompressor.read(buffer);
+      }
+    } else {
       buffer.position(buffer.position() - 1);
       this.valueVec = InputVectorFactory.readFrom(buffer);
-//    }
+    }
   }
 }
