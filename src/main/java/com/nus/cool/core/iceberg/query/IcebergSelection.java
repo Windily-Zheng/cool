@@ -305,9 +305,11 @@ public class IcebergSelection {
 
         // 3. Filter: Search matched rows
         long filterStart = System.nanoTime();
+        BitSet fieldBitset = new BitSet(chunk.getRecords());
         for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
-          bs.or(entry.getValue());
+          fieldBitset.or(entry.getValue());
         }
+        bs.and(fieldBitset);
         long filterEnd = System.nanoTime();
         totalFilterTime += (filterEnd - filterStart);
 

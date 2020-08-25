@@ -44,7 +44,7 @@ public class Controller {
 
       long cachingTime = 0;
       long queryTime = 0;
-//    int count = 1;
+//      int count = 1;
 
       for (IcebergQuery query : queries) {
         long queryStart = System.nanoTime();
@@ -53,13 +53,15 @@ public class Controller {
         long queryEnd = System.nanoTime();
         queryTime += (queryEnd - queryStart);
 
-//        QueryResult result = QueryResult.ok(results);
-//        System.out.println(result.toString());
-
         long cachingStart = System.nanoTime();
         cacheManager.caching();
         long cachingEnd = System.nanoTime();
         cachingTime += (cachingEnd - cachingStart);
+
+//        QueryResult result = QueryResult.ok(results);
+//        System.out.println("Q[" + count + "]: ");
+//        System.out.println(result.toString());
+//        count++;
       }
 
       double aveQueryTime = queryTime / queries.size();
