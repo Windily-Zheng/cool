@@ -240,8 +240,6 @@ public class IcebergSelection {
     if (selectionFilter.getType().equals(SelectionQuery.SelectionType.filter)) {
       String dimension = selectionFilter.getDimension();
       FieldRS field = chunk.getField(this.tableSchema.getFieldID(dimension));
-      InputVector keyVector = field.getKeyVector();
-      BitSet[] bitSets = field.getBitSets();
       boolean isPreCal = this.tableSchema.getField(dimension).isPreCal();
       if (reuse && field.isSetField() && isPreCal) {
         FieldFilter fieldFilter = selectionFilter.getFilter();

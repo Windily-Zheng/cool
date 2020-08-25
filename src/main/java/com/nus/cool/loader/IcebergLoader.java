@@ -43,18 +43,18 @@ public class IcebergLoader {
     ObjectMapper mapper = new ObjectMapper();
     List<IcebergQuery> queries = Lists.newArrayList();
 
-//    String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/query/";
-    String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/query/";
+//    String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/iceberg-query/";
+    String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query/";
 
-//    for (int i = 1; i <= 10; i++) {
-//      String fileName = queryRoot + "query" + i + ".json";
-//      IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
-//      queries.add(query);
-//    }
+    for (int i = 1; i <= 10; i++) {
+      String fileName = queryRoot + "query" + i + ".json";
+      IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
+      queries.add(query);
+    }
 
-    String fileName = queryRoot + "iceberg-query2.json";
-    IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
-    queries.add(query);
+//    String fileName = queryRoot + "query1.json";
+//    IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
+//    queries.add(query);
 
     return queries;
 //    QueryResult result = wrapResult(coolModel.getCube(query.getDataSource()), query);

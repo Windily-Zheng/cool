@@ -38,8 +38,9 @@ public class IcebergProcessor {
   public static List<BaseResult> executeQuery(CubeRS cube, IcebergQuery query,
       CacheManager cacheManager) throws IOException, ParseException {
     // TODO: Need to get from query
-    boolean reuse = true;
+    boolean reuse = false;
     String storageLevel = "MEMORY_ONLY";
+    System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
     TableSchema tableSchema = cube.getSchema();
@@ -77,7 +78,6 @@ public class IcebergProcessor {
           for (Map.Entry<String, BitSet> entry : map.entrySet()) {
             String timeRange = entry.getKey();
             BitSet bs = entry.getValue();
-            System.out.println(bs.cardinality());
             IcebergAggregation icebergAggregation = new IcebergAggregation();
             icebergAggregation.init(bs, query.getGroupFields(), metaChunk, dataChunk, timeRange);
             for (Aggregation aggregation : query.getAggregations()) {
