@@ -20,10 +20,25 @@ import java.util.Map;
 
 public class IcebergProcessor {
 
+  // for testing
+  public static double totalLoadTime = 0;
+
+  // for testing
+  public static double totalGenerateTime = 0;
+
+  // for testing
+  public static double totalFilterTime = 0;
+
+  // for testing
+  public static double totalSelectionTime = 0;
+
+  // for testing
+  public static double totalAggregationTime = 0;
+
   public static List<BaseResult> executeQuery(CubeRS cube, IcebergQuery query,
       CacheManager cacheManager) throws IOException, ParseException {
     // TODO: Need to get from query
-    boolean reuse = true;
+    boolean reuse = false;
     String storageLevel = "MEMORY_AND_DISK";
 
     List<CubletRS> cublets = cube.getCublets();
@@ -51,11 +66,14 @@ public class IcebergProcessor {
           if (bitSet.cardinality() == 0) {
             continue;
           }
-          Map<String, BitSet> map = selection.process(dataChunk, bitSet, reuse, cacheManager, storageLevel,
-              cubletFile.substring(0, cubletFile.length() - 3));
+          Map<String, BitSet> map = selection
+              .process(dataChunk, bitSet, reuse, cacheManager, storageLevel,
+                  cubletFile.substring(0, cubletFile.length() - 3));
+
           if (map == null) {
             continue;
           }
+          long aggregationStart = System.nanoTime();
           for (Map.Entry<String, BitSet> entry : map.entrySet()) {
             String timeRange = entry.getKey();
             BitSet bs = entry.getValue();
@@ -66,7 +84,14 @@ public class IcebergProcessor {
               results.addAll(res);
             }
           }
+          long aggregationEnd = System.nanoTime();
+          totalAggregationTime += (aggregationEnd - aggregationStart);
         }
+        // for testing
+        totalLoadTime += selection.totalLoadTime;
+        totalGenerateTime += selection.totalGenerateTime;
+        totalFilterTime += selection.totalFilterTime;
+        totalSelectionTime += selection.totalSelectionTime;
       }
     }
     results = BaseResult.merge(results);

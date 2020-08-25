@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.swing.plaf.synth.SynthEditorPaneUI;
 
 /**
  * @author hongbin
@@ -73,6 +74,18 @@ public class IcebergSelection {
   private List<Integer> maxs;
 
   private List<Integer> mins;
+
+  // for testing
+  public double totalLoadTime;
+
+  // for testing
+  public double totalGenerateTime;
+
+  // for testing
+  public double totalFilterTime;
+
+  // for testing
+  public double totalSelectionTime;
 
   private void splitTimeRange() throws ParseException {
     // TODO: format time range
@@ -225,15 +238,18 @@ public class IcebergSelection {
       return bs;
     }
     if (selectionFilter.getType().equals(SelectionQuery.SelectionType.filter)) {
-      FieldRS field = chunk.getField(this.tableSchema.getFieldID(selectionFilter.getDimension()));
+      String dimension = selectionFilter.getDimension();
+      FieldRS field = chunk.getField(this.tableSchema.getFieldID(dimension));
       InputVector keyVector = field.getKeyVector();
       BitSet[] bitSets = field.getBitSets();
-      if (reuse && field.isSetField() && field.isPreCal()) {
+      boolean isPreCal = this.tableSchema.getField(dimension).isPreCal();
+      if (reuse && field.isSetField() && isPreCal) {
         FieldFilter fieldFilter = selectionFilter.getFilter();
-        BitSet filterBitset = ((SetFieldFilter)fieldFilter).getFilter();
-        String dimension = selectionFilter.getDimension();
+        BitSet filterBitset = ((SetFieldFilter) fieldFilter).getFilter();
 
+        // 1. Load: Load cache
         // Construct cache keys
+        long loadStart = System.nanoTime();
         List<CacheKey> cacheKeys = Lists.newArrayList();
         Set<Integer> localIDSet = new HashSet<>();
         int pos = 0;
@@ -245,15 +261,18 @@ public class IcebergSelection {
           pos = filterBitset.nextSetBit(pos + 1);
         }
 
-        // 1. Load: Load cache
+        // Load cache
         Map<Integer, BitSet> cachedBitsets = Maps.newLinkedHashMap();
         Map<CacheKey, BitSet> loadBitsets = cacheManager.load(cacheKeys, storageLevel);
         for (Map.Entry<CacheKey, BitSet> entry : loadBitsets.entrySet()) {
           cachedBitsets.put(entry.getKey().getLocalID(), entry.getValue());
         }
+        long loadEnd = System.nanoTime();
+        totalLoadTime += (loadEnd - loadStart);
 
         // 2. Generate: Generate missing bitsets
         if (cachedBitsets.size() < localIDSet.size()) {
+          long generateStart = System.nanoTime();
           Map<Integer, BitSet> toCacheBitsets = Maps.newLinkedHashMap();
           // Check missing localIDs
           for (int id : localIDSet) {
@@ -275,16 +294,22 @@ public class IcebergSelection {
           }
           // Add missing bitsets to cache
           for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
-            CacheKey cacheKey = new CacheKey(cubletFileName, dimension, chunk.getChunkID(), entry.getKey());
+            CacheKey cacheKey = new CacheKey(cubletFileName, dimension, chunk.getChunkID(),
+                entry.getKey());
             cacheManager.addToCacheBitsets(cacheKey, entry.getValue(), storageLevel);
             cachedBitsets.put(entry.getKey(), entry.getValue());
           }
+          long generateEnd = System.nanoTime();
+          totalGenerateTime += (generateEnd - generateStart);
         }
 
         // 3. Filter: Search matched rows
+        long filterStart = System.nanoTime();
         for (Map.Entry<Integer, BitSet> entry : cachedBitsets.entrySet()) {
-            bs.or(entry.getValue());
+          bs.or(entry.getValue());
         }
+        long filterEnd = System.nanoTime();
+        totalFilterTime += (filterEnd - filterStart);
 
 //        List<String> values = selectionFilter.getFilter().getValues();
 //        for (String value : values) {
@@ -293,7 +318,10 @@ public class IcebergSelection {
 //          bs.or(bitSets[localId]);
 //        }
       } else {
+        long filterStart = System.nanoTime();
         selectFields(bs, field, selectionFilter.getFilter());
+        long filterEnd = System.nanoTime();
+        totalFilterTime += (filterEnd - filterStart);
       }
     } else if (selectionFilter.getType().equals(SelectionQuery.SelectionType.and)) {
       for (SelectionFilter childFilter : selectionFilter.getFields()) {
@@ -340,6 +368,12 @@ public class IcebergSelection {
       this.min = converter.toInt(timePoints[0]);
       this.max = converter.toInt(timePoints[1]);
       splitTimeRange();
+
+      // for testing
+      totalLoadTime = 0;
+      totalGenerateTime = 0;
+      totalFilterTime = 0;
+      totalSelectionTime = 0;
     }
   }
 
@@ -408,8 +442,11 @@ public class IcebergSelection {
       }
     }
     for (Map.Entry<String, BitSet> entry : map.entrySet()) {
+      long selectionStart = System.nanoTime();
       BitSet bs = select(this.filter, chunk, entry.getValue(), reuse, cacheManager, storageLevel,
           cubletFileName);
+      long selectionEnd = System.nanoTime();
+      totalSelectionTime += (selectionEnd - selectionStart);
       map.put(entry.getKey(), bs);
     }
     return map;

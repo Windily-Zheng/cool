@@ -42,15 +42,51 @@ public class Controller {
       icebergProcessor = new IcebergProcessor();
       List<IcebergQuery> queries = icebergLoader.load();
 
+      long cachingTime = 0;
+      long queryTime = 0;
+//    int count = 1;
+
       for (IcebergQuery query : queries) {
+        long queryStart = System.nanoTime();
         List<BaseResult> results = icebergProcessor
             .executeQuery(coolModel.getCube(query.getDataSource()), query, cacheManager);
-        QueryResult result = QueryResult.ok(results);
-        System.out.println(result.toString());
+        long queryEnd = System.nanoTime();
+        queryTime += (queryEnd - queryStart);
 
+//        QueryResult result = QueryResult.ok(results);
+//        System.out.println(result.toString());
+
+        long cachingStart = System.nanoTime();
         cacheManager.caching();
+        long cachingEnd = System.nanoTime();
+        cachingTime += (cachingEnd - cachingStart);
       }
 
+      double aveQueryTime = queryTime / queries.size();
+      double aveSelectionTime = IcebergProcessor.totalSelectionTime / queries.size();
+      double aveAggregationTime = IcebergProcessor.totalAggregationTime / queries.size();
+      double aveLoadTime = IcebergProcessor.totalLoadTime / queries.size();
+      double aveGenerateTime = IcebergProcessor.totalGenerateTime / queries.size();
+      double aveFilterTime = IcebergProcessor.totalFilterTime / queries.size();
+      double aveCachingTime = cachingTime / queries.size();
+
+      System.out
+          .printf("Average Query Time: %.2f ns => %.3f ms\n", aveQueryTime, aveQueryTime / 1000000);
+      System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
+          aveSelectionTime / 1000000);
+      System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
+          aveAggregationTime / 1000000);
+      System.out
+          .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
+      System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
+          aveGenerateTime / 1000000);
+      System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
+          aveFilterTime / 1000000);
+      System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
+          aveCachingTime / 1000000);
+      System.out
+          .printf("Hit rate: %.2f%%\n",
+              CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     } else if ("Cohort".equals(queryType)) {
       cohortLoader = new CohortLoader();
       cohortProcessor = new CohortProcessor();
