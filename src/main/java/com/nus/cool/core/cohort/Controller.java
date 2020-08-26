@@ -78,12 +78,12 @@ public class Controller {
           aveSelectionTime / 1000000);
       System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
           aveAggregationTime / 1000000);
+      System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
+          aveFilterTime / 1000000);
       System.out
           .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
       System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
           aveGenerateTime / 1000000);
-      System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
-          aveFilterTime / 1000000);
       System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
           aveCachingTime / 1000000);
       System.out
