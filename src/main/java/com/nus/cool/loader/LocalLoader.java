@@ -53,12 +53,12 @@ public class LocalLoader {
     TableSchema schema = TableSchema.read(new FileInputStream(new File(cubeRoot, "table.yaml")));
 //        File dimensionFile = new File(cubeRoot, "dim_test.csv");
 //        File dataFile = new File(cubeRoot, "test.csv");
-    File dimensionFile = new File(cubeRoot, "dim_2.4G.csv");
-    File dataFile = new File(cubeRoot, "data_2.4G.csv");
+    File dimensionFile = new File(cubeRoot, args[3]);
+    File dataFile = new File(cubeRoot, args[4]);
     File outputDir = new File(cubeRoot, args[1]);
     int chunkSize = 10000000;
 
-    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 10 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
 
     cacheManager = new CacheManager(args[2], memoryCacheSize, diskCacheSize, 0.8);
@@ -67,7 +67,11 @@ public class LocalLoader {
     boolean reuse = true;
     String storageLevel = "DISK_ONLY";
 
+    long ingestionStart = System.nanoTime();
     load(schema, dimensionFile, dataFile, outputDir, chunkSize, reuse, storageLevel);
+    long ingestionEnd = System.nanoTime();
+    double ingestionTime = (ingestionEnd - ingestionStart) / (double) 1000000 / 1000;
+    System.out.printf("Ingestion Time: %.3f s => %.3f min\n", ingestionTime, ingestionTime / 60);
   }
 
   public static void load(TableSchema tableSchema, File dimensionFile, File dataFile,

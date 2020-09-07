@@ -38,8 +38,8 @@ public class IcebergProcessor {
   public static List<BaseResult> executeQuery(CubeRS cube, IcebergQuery query,
       CacheManager cacheManager) throws IOException, ParseException {
     // TODO: Need to get from query
-    boolean reuse = false;
-    String storageLevel = "MEMORY_ONLY";
+    boolean reuse = true;
+    String storageLevel = "MEMORY_AND_DISK";
     System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
