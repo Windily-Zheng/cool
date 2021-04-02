@@ -29,7 +29,7 @@ public class Controller {
     coolModel = new CoolModel(args[0]);
     coolModel.reload(args[1]);
 
-    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 100 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
     cacheManager = new CacheManager(args[0] + "/" + args[2], memoryCacheSize, diskCacheSize,
         0.8);
@@ -44,7 +44,7 @@ public class Controller {
 
       long cachingTime = 0;
       long queryTime = 0;
-//      int count = 1;
+      int count = 1;
 
       for (IcebergQuery query : queries) {
         long queryStart = System.nanoTime();
@@ -58,10 +58,10 @@ public class Controller {
         long cachingEnd = System.nanoTime();
         cachingTime += (cachingEnd - cachingStart);
 
-//        QueryResult result = QueryResult.ok(results);
+        QueryResult result = QueryResult.ok(results);
 //        System.out.println("Q[" + count + "]: ");
 //        System.out.println(result.toString());
-//        count++;
+        count++;
       }
 
       double aveQueryTime = queryTime / queries.size();

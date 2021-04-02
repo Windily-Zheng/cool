@@ -1,9 +1,10 @@
 package com.nus.cool.core.io.cache;
 
 import com.google.common.collect.Maps;
+import com.nus.cool.core.io.cache.utils.BubbleLRULinkedHashMap;
 import java.util.BitSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+//import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,7 +17,8 @@ public class MemoryStore {
 
   private double usedMemorySize; // bits
 
-  public Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
+//  public Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
+  public Map<CacheKey, BitSet> entries = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
 
   public MemoryStore(double memoryCacheSize, double entryCacheLimit) {
     if (memoryCacheSize <= 0) {

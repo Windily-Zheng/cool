@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.nus.cool.core.io.cache.utils.BubbleLRULinkedHashMap;
 import com.nus.cool.core.io.compression.SimpleBitSetCompressor;
 
 import java.io.DataOutputStream;
@@ -15,7 +16,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+//import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,7 +32,8 @@ public class DiskStore {
 
   private double usedDiskSize;
 
-  private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
+//  private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
+  private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
 
   public DiskStore(String path, double diskCacheSize, double entryCacheLimit) {
     checkNotNull(path);

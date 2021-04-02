@@ -9,3 +9,4 @@ sogamo/
 birth cache test/
 storage/
 query/
+iceberg-query/
