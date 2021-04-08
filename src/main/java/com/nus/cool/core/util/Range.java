@@ -1,5 +1,7 @@
 package com.nus.cool.core.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import lombok.Getter;
 
 public class Range {
@@ -13,12 +15,14 @@ public class Range {
   public Range(int min, int max) {
     this.min = min;
     this.max = max;
+    checkArgument(this.min <= this.max);
   }
 
   public Range(String range) {
     String[] s = range.split("\\|");
     this.min = Integer.parseInt(s[0]);
     this.max = Integer.parseInt(s[1]);
+    checkArgument(this.min <= this.max);
   }
 
   public int compareTo(Range range) {
@@ -26,7 +30,7 @@ public class Range {
     if (range == null)
       return -2;
     // exact: 0
-    if (this.equals(range))
+    if (min == range.getMin() && max == range.getMax())
       return 0;
     // less than (subsuming): -1
     if (min >= range.getMin() && max <= range.getMax())
@@ -39,14 +43,6 @@ public class Range {
   }
 
   @Override
-  public int hashCode() {
-    int result = 1;
-    result = 31 * result + min;
-    result = 31 * result + max;
-    return result;
-  }
-
-  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -56,10 +52,19 @@ public class Range {
     }
     Range range = (Range) o;
     return range.getMin() == this.min && range.getMax() == this.max;
+//    return this.compareTo(range) == 0 || this.compareTo(range) == -1 || this.compareTo(range) == 1;
   }
 
   @Override
   public String toString() {
     return this.min + "|" + this.max;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 1;
+    result = 31 * result + min;
+    result = 31 * result + max;
+    return result;
   }
 }

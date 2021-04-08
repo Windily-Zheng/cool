@@ -83,13 +83,14 @@ public class CacheManager {
         for (Map.Entry<CacheKey, BitSet> entry : diskCachedBitsets.entrySet()) {
           cachedBitsets.put(entry.getKey(), entry.getValue());
           // Put missing entries into memory cache
-          Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(entry.getKey(), entry.getValue());
-          if (evictedBitsets.size() > 0) {
-            // Put evicted bitsets into disk cache
-            for (Map.Entry<CacheKey, BitSet> en : evictedBitsets.entrySet()) {
-              diskStore.put(en.getKey(), en.getValue());
-            }
-          }
+//          Map<CacheKey, BitSet> evictedBitsets = memoryStore.put(entry.getKey(), entry.getValue());
+//          if (evictedBitsets.size() > 0) {
+//            // Put evicted bitsets into disk cache
+//            for (Map.Entry<CacheKey, BitSet> en : evictedBitsets.entrySet()) {
+//              diskStore.put(en.getKey(), en.getValue());
+//            }
+//          }
+          addToCacheBitsets(entry.getKey(), entry.getValue(), "MEMORY_AND_DISK");
         }
       }
 //      hitNum += cachedBitsets.size();

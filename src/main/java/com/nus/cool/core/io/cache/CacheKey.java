@@ -43,6 +43,18 @@ public class CacheKey {
     this.range = range;
   }
 
+  public CacheKey(CacheKeyPrefix prefix, Range range) {
+    if (prefix.getType() != CacheKeyType.TIME && prefix.getType() != CacheKeyType.FILTER) {
+      throw new IllegalArgumentException(
+          "Mismatched CacheKey type with TIME/FILTER: " + prefix.getType());
+    }
+    this.type = prefix.getType();
+    this.cubletFileName = prefix.getCubletFileName();
+    this.fieldName = prefix.getFieldName();
+    this.chunkID = prefix.getChunkID();
+    this.range = range;
+  }
+
   public CacheKey(String cacheFileName) {
     String fileName = cacheFileName.substring(0, cacheFileName.length() - 3);
     String[] s = fileName.split("_");
