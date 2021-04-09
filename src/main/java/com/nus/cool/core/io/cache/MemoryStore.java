@@ -64,8 +64,24 @@ public class MemoryStore {
             if (range.getMin() >= max) {
               break;
             }
-            if ((range.getMin() <= min && range.getMax() >= max) ||
-                (range.getMin() >= min && range.getMax() <= max)) {
+            // Exact Reuse Case
+            if (range.getMin() == min && range.getMax() == max) {
+              // Clear potential other reuse cases stored previously
+              candidateKeys.clear();
+              CacheKey candidateKey = new CacheKey(prefix, range);
+              candidateKeys.add(candidateKey);
+              break;
+            }
+            // Subsuming Reuse Case
+            if (range.getMin() <= min && range.getMax() >= max) {
+              // Clear potential partial reuse cases stored previously
+              candidateKeys.clear();
+              CacheKey candidateKey = new CacheKey(prefix, range);
+              candidateKeys.add(candidateKey);
+              break;
+            }
+            // Partial Reuse Case
+            if (range.getMin() >= min && range.getMax() <= max) {
               CacheKey candidateKey = new CacheKey(prefix, range);
               candidateKeys.add(candidateKey);
             }
@@ -103,12 +119,12 @@ public class MemoryStore {
     }
 
     entries.put(cacheKey, bitSet);
+
     if (cacheKey.getType() == CacheKeyType.TIME || cacheKey.getType() == CacheKeyType.FILTER) {
       CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
       if (rangeCacheKeys.containsKey(prefix)) {
         rangeCacheKeys.get(prefix).add(cacheKey.getRange());
-      }
-      else {
+      } else {
         SortedSet<Range> rangeSet = new TreeSet<Range>(new Comparator<Range>() {
           @Override
           public int compare(Range o1, Range o2) {
@@ -127,6 +143,14 @@ public class MemoryStore {
     return evictedBitsets;
   }
 
+  public boolean remove(CacheKey cacheKey) {
+    if (entries.containsKey(cacheKey)) {
+      usedMemorySize -= entries.get(cacheKey).size();
+      return true;
+    }
+    return false;
+  }
+
   private Map<CacheKey, BitSet> evict(double size) {
     int freeSize = 0;
     Map<CacheKey, BitSet> evictedBitsets = Maps.newLinkedHashMap();
@@ -142,6 +166,9 @@ public class MemoryStore {
       CacheKeyPrefix prefix = new CacheKeyPrefix(entry.getKey());
       if (rangeCacheKeys.containsKey(prefix)) {
         rangeCacheKeys.get(prefix).remove(entry.getKey().getRange());
+        if (rangeCacheKeys.get(prefix).isEmpty()) {
+          rangeCacheKeys.remove(prefix);
+        }
       }
 
       if (freeSize >= size) {

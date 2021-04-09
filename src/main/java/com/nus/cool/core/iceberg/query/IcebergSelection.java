@@ -21,8 +21,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.nus.cool.core.cohort.filter.FieldFilter;
 import com.nus.cool.core.cohort.filter.FieldFilterFactory;
+import com.nus.cool.core.cohort.filter.RangeFieldFilter;
 import com.nus.cool.core.cohort.filter.SetFieldFilter;
 import com.nus.cool.core.io.cache.CacheKey;
+import com.nus.cool.core.io.cache.CacheKeyType;
 import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
 import com.nus.cool.core.io.readstore.FieldRS;
@@ -31,6 +33,7 @@ import com.nus.cool.core.io.readstore.MetaFieldRS;
 import com.nus.cool.core.io.storevector.InputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
+import com.nus.cool.core.util.Range;
 import com.nus.cool.core.util.converter.DayIntConverter;
 import java.io.IOException;
 import java.text.ParseException;
@@ -317,6 +320,147 @@ public class IcebergSelection {
 //          int localId = keyVector.find(gId);
 //          bs.or(bitSets[localId]);
 //        }
+      } else if (reuse && !field.isSetField()) {
+        // Proper range of filter range length
+        // TODO: Need to get from Controller
+        Range filterRangeLength = new Range(100, 10000);
+
+        FieldFilter fieldFilter = selectionFilter.getFilter();
+        int[] minValues = ((RangeFieldFilter) fieldFilter).getMinValues();
+        int[] maxValues = ((RangeFieldFilter) fieldFilter).getMaxValues();
+
+        // 1. Load: Load cache
+        // Construct cache keys
+        // TODO: Suppose one filter one range first, need to deal with multiple ranges
+        long loadStart = System.nanoTime();
+        List<CacheKey> cacheKeys = Lists.newArrayList();
+        Range searchedRange = new Range(minValues[0], maxValues[0]);
+        CacheKey searchedKey = new CacheKey(CacheKeyType.FILTER, cubletFileName, dimension,
+            chunk.getChunkID(), searchedRange);
+        cacheKeys.add(searchedKey);
+
+        // Load cache
+        Map<CacheKey, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+        long loadEnd = System.nanoTime();
+        totalLoadTime += (loadEnd - loadStart);
+
+        // 2. Reuse Cases
+        // Exact/Subsuming/Partial Reuse
+        if (cachedBitsets.size() == 1) {
+          for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+            Range cachedRange = entry.getKey().getRange();
+            BitSet cachedBitset = entry.getValue();
+            // Exact Reuse
+            if (searchedRange.compareTo(cachedRange) == 0) {
+              bs.and(cachedBitset);
+            }
+            // Subsuming Reuse (searchedRange is smaller than cachedRange)
+            else if (searchedRange.compareTo(cachedRange) == -1) {
+              // Traverse InputVector for further filtering
+              InputVector fieldIn = field.getValueVector();
+              int off = 0;
+              // Search in bit=1
+              off = cachedBitset.nextSetBit(off);
+              while (off < fieldIn.size() && off >= 0) {
+                fieldIn.skipTo(off);
+                if (!fieldFilter.accept(fieldIn.next())) {
+                  cachedBitset.clear(off);
+                }
+                off = cachedBitset.nextSetBit(off + 1);
+              }
+
+              // Get filter result
+              bs.and(cachedBitset);
+
+              // Caching filter bitset
+              if (filterRangeLength.contains(searchedRange.getLength()) && !filterRangeLength
+                  .contains(cachedRange.getLength())) {
+                cacheManager.remove(entry.getKey(), storageLevel);
+                cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+              }
+            }
+            // Partial Reuse (searchedRange is larger than cachedRange)
+            else if (searchedRange.compareTo(cachedRange) == 1) {
+              // Traverse InputVector to add qualified records
+              InputVector fieldIn = field.getValueVector();
+              int off = 0;
+              // Search in bit=0
+              off = cachedBitset.nextClearBit(off);
+              while (off < fieldIn.size() && off >= 0) {
+                fieldIn.skipTo(off);
+                if (fieldFilter.accept(fieldIn.next())) {
+                  cachedBitset.set(off);
+                }
+                off = cachedBitset.nextClearBit(off + 1);
+              }
+
+              // Get filter result
+              bs.and(cachedBitset);
+
+              // Caching filter bitset
+              if (filterRangeLength.contains(searchedRange.getLength()) && !filterRangeLength
+                  .contains(cachedRange.getLength())) {
+                cacheManager.remove(entry.getKey(), storageLevel);
+                cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+              }
+            }
+          }
+        }
+        // Partial Reuse (more than one candidate range)
+        else if (cachedBitsets.size() > 1) {
+          boolean allNotInFilterRangeLength = true;
+          BitSet cachedBitset = new BitSet(chunk.getRecords());
+          Range cachedRange = null;
+          for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+            if (cachedRange == null) {
+              cachedRange = entry.getKey().getRange();
+            } else if (cachedRange.compareTo(entry.getKey().getRange()) != 2) {
+              cachedRange.union(entry.getKey().getRange());
+            }
+            cachedBitset.or(entry.getValue());
+            if (filterRangeLength.contains(entry.getKey().getRange().getLength())) {
+              allNotInFilterRangeLength = false;
+            }
+          }
+
+          // Traverse InputVector to add qualified records
+          if (!searchedRange.equals(cachedRange)) {
+            InputVector fieldIn = field.getValueVector();
+            int off = 0;
+            // Search in bit=0
+            off = cachedBitset.nextClearBit(off);
+            while (off < fieldIn.size() && off >= 0) {
+              fieldIn.skipTo(off);
+              if (fieldFilter.accept(fieldIn.next())) {
+                cachedBitset.set(off);
+              }
+              off = cachedBitset.nextClearBit(off + 1);
+            }
+          }
+
+          // Get filter result
+          bs.and(cachedBitset);
+
+          // Caching filter bitset
+          if (filterRangeLength.contains(searchedRange.getLength()) && allNotInFilterRangeLength) {
+            for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+              cacheManager.remove(entry.getKey(), storageLevel);
+            }
+            cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+          }
+        }
+        // No Reuse
+        else if (cachedBitsets.size() == 0) {
+          BitSet filterBitSet = new BitSet(chunk.getRecords());
+          InputVector fieldIn = field.getValueVector();
+          fieldIn.skipTo(0);
+          for (int i = 0; i < fieldIn.size(); i++) {
+            if (fieldFilter.accept(fieldIn.next())) {
+              filterBitSet.set(i);
+            }
+          }
+          cacheManager.addToCacheBitsets(searchedKey, filterBitSet, storageLevel);
+        }
       } else {
         long filterStart = System.nanoTime();
         selectFields(bs, field, selectionFilter.getFilter());

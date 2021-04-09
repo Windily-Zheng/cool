@@ -100,6 +100,21 @@ public class CacheManager {
     }
   }
 
+  public void remove(CacheKey cacheKey, String storageLevel) {
+    checkNotNull(storageLevel);
+    if ("MEMORY_ONLY".equals(storageLevel)) {
+      memoryStore.remove(cacheKey);
+    } else if ("DISK_ONLY".equals(storageLevel)) {
+      diskStore.remove(cacheKey);
+    } else if ("MEMORY_AND_DISK".equals(storageLevel)) {
+      if (!memoryStore.remove(cacheKey)) {
+        diskStore.remove(cacheKey);
+      }
+    } else {
+      throw new IllegalArgumentException("Illegal storageLevel: " + storageLevel);
+    }
+  }
+
   public void addToCacheBitsets(CacheKey cacheKey, BitSet bitSet, String storageLevel) {
     CacheEntry cacheEntry = new CacheEntry(cacheKey, bitSet);
     toCacheBitsets.put(cacheEntry, storageLevel);
@@ -115,7 +130,7 @@ public class CacheManager {
   private void initMemoryFromDisk() throws IOException {
     Set<CacheKey> diskCachedKeys = diskStore.getCachedKeys();
     List<CacheKey> cacheKeys = Lists.newArrayList(diskCachedKeys);
-    Map<CacheKey, BitSet> diskCachedBitsets = diskStore.load(cacheKeys);
+    Map<CacheKey, BitSet> diskCachedBitsets = diskStore.loadExact(cacheKeys);
     if (cacheKeys.size() != diskCachedBitsets.size()) {
       throw new RuntimeException(
           "Size of cacheKeys(" + cacheKeys.size() + ") is not equal to size of diskCachedBitsets("

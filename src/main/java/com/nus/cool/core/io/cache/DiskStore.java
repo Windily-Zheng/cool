@@ -7,6 +7,7 @@ import com.google.common.io.Files;
 import com.nus.cool.core.io.cache.utils.BubbleLRULinkedHashMap;
 import com.nus.cool.core.io.compression.SimpleBitSetCompressor;
 
+import com.nus.cool.core.util.Range;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -15,12 +16,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class DiskStore {
 
@@ -32,8 +37,10 @@ public class DiskStore {
 
   private double usedDiskSize;
 
-//  private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
+  //  private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
   private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
+
+  private Map<CacheKeyPrefix, SortedSet<Range>> rangeCacheKeys = new java.util.HashMap<>();
 
   public DiskStore(String path, double diskCacheSize, double entryCacheLimit) {
     checkNotNull(path);
@@ -67,6 +74,25 @@ public class DiskStore {
       int blockSize = (int) cacheFile.length();
       blockSizes.put(cacheKey, blockSize);
       usedDiskSize += blockSize;
+
+      if (cacheKey.getType() == CacheKeyType.TIME || cacheKey.getType() == CacheKeyType.FILTER) {
+        CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
+        if (rangeCacheKeys.containsKey(prefix)) {
+          rangeCacheKeys.get(prefix).add(cacheKey.getRange());
+        } else {
+          SortedSet<Range> rangeSet = new TreeSet<Range>(new Comparator<Range>() {
+            @Override
+            public int compare(Range o1, Range o2) {
+              if (o1.getMin() != o2.getMin()) {
+                return o1.getMin() - o2.getMin();
+              } else {
+                return o1.getMax() - o2.getMax();
+              }
+            }
+          });
+          rangeCacheKeys.put(prefix, rangeSet);
+        }
+      }
     }
     if (usedDiskSize > diskCacheSize) {
       evict(usedDiskSize - diskCacheSize);
@@ -74,6 +100,73 @@ public class DiskStore {
   }
 
   public Map<CacheKey, BitSet> load(List<CacheKey> cacheKeys) throws IOException {
+    Map<CacheKey, BitSet> cachedBitsets = Maps.newLinkedHashMap();
+    for (CacheKey cacheKey : cacheKeys) {
+      if (cacheKey.getType() == CacheKeyType.VALUE) {
+        if (blockSizes.containsKey(cacheKey)) {
+          blockSizes.get(cacheKey);
+          File cacheFile = new File(cacheRoot, cacheKey.getFileName());
+          if (cacheFile.exists()) {
+            ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
+            BitSet bitSet = SimpleBitSetCompressor.read(buffer);
+            cachedBitsets.put(cacheKey, bitSet);
+          }
+        }
+      } else {
+        CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
+        if (rangeCacheKeys.containsKey(prefix)) {
+          SortedSet<Range> rangeSet = rangeCacheKeys.get(prefix);
+
+          // Get candidate CacheKeys (exact/partial/subsuming)
+          Set<CacheKey> candidateKeys = new HashSet<>();
+          int min = cacheKey.getRange().getMin();
+          int max = cacheKey.getRange().getMax();
+          for (Range range : rangeSet) {
+            if (range.getMin() >= max) {
+              break;
+            }
+            // Exact Reuse Case
+            if (range.getMin() == min && range.getMax() == max) {
+              // Clear potential other reuse cases stored previously
+              candidateKeys.clear();
+              CacheKey candidateKey = new CacheKey(prefix, range);
+              candidateKeys.add(candidateKey);
+              break;
+            }
+            // Subsuming Reuse Case
+            if (range.getMin() <= min && range.getMax() >= max) {
+              // Clear potential partial reuse cases stored previously
+              candidateKeys.clear();
+              CacheKey candidateKey = new CacheKey(prefix, range);
+              candidateKeys.add(candidateKey);
+              break;
+            }
+            // Partial Reuse Case
+            if (range.getMin() >= min && range.getMax() <= max) {
+              CacheKey candidateKey = new CacheKey(prefix, range);
+              candidateKeys.add(candidateKey);
+            }
+          }
+
+          // Load candidate Bitsets from memory cache
+          for (CacheKey key : candidateKeys) {
+            if (blockSizes.containsKey(key)) {
+              blockSizes.get(key);
+              File cacheFile = new File(cacheRoot, key.getFileName());
+              if (cacheFile.exists()) {
+                ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
+                BitSet bitSet = SimpleBitSetCompressor.read(buffer);
+                cachedBitsets.put(key, bitSet);
+              }
+            }
+          }
+        }
+      }
+    }
+    return cachedBitsets;
+  }
+
+  public Map<CacheKey, BitSet> loadExact(List<CacheKey> cacheKeys) throws IOException {
     Map<CacheKey, BitSet> cachedBitsets = Maps.newLinkedHashMap();
     for (CacheKey cacheKey : cacheKeys) {
       if (blockSizes.containsKey(cacheKey)) {
@@ -107,9 +200,37 @@ public class DiskStore {
     blockSizes.put(cacheKey, bytesWritten);
     usedDiskSize += bytesWritten;
 
+    if (cacheKey.getType() == CacheKeyType.TIME || cacheKey.getType() == CacheKeyType.FILTER) {
+      CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
+      if (rangeCacheKeys.containsKey(prefix)) {
+        rangeCacheKeys.get(prefix).add(cacheKey.getRange());
+      } else {
+        SortedSet<Range> rangeSet = new TreeSet<Range>(new Comparator<Range>() {
+          @Override
+          public int compare(Range o1, Range o2) {
+            if (o1.getMin() != o2.getMin()) {
+              return o1.getMin() - o2.getMin();
+            } else {
+              return o1.getMax() - o2.getMax();
+            }
+          }
+        });
+        rangeCacheKeys.put(prefix, rangeSet);
+      }
+    }
+
     if (usedDiskSize > diskCacheSize) {
       evict(usedDiskSize - diskCacheSize);
     }
+  }
+
+  public boolean remove(CacheKey cacheKey) {
+    if (blockSizes.containsKey(cacheKey)) {
+      usedDiskSize -= blockSizes.get(cacheKey);
+      blockSizes.remove(cacheKey);
+      return true;
+    }
+    return false;
   }
 
   private void evict(double size) {
@@ -124,6 +245,16 @@ public class DiskStore {
       }
       freeSize += entry.getValue();
       it.remove();
+
+      // Remove from rangeCacheKeys
+      CacheKeyPrefix prefix = new CacheKeyPrefix(entry.getKey());
+      if (rangeCacheKeys.containsKey(prefix)) {
+        rangeCacheKeys.get(prefix).remove(entry.getKey().getRange());
+        if (rangeCacheKeys.get(prefix).isEmpty()) {
+          rangeCacheKeys.remove(prefix);
+        }
+      }
+
       if (freeSize >= size) {
         break;
       }

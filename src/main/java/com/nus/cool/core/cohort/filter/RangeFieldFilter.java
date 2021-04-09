@@ -26,6 +26,7 @@ import com.nus.cool.core.util.converter.NumericConverter;
 import com.nus.cool.core.util.parser.TupleParser;
 import com.nus.cool.core.util.parser.VerticalTupleParser;
 import java.util.List;
+import lombok.Getter;
 
 /**
  * Range Field Filter
@@ -36,8 +37,10 @@ import java.util.List;
  */
 public class RangeFieldFilter implements FieldFilter {
 
+  @Getter
   private int[] minValues;
 
+  @Getter
   private int[] maxValues;
 
   private int min;
