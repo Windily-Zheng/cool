@@ -62,6 +62,7 @@ public class CohortSelection implements Operator {
 
   private Map<String, FieldFilter> birthFilters = Maps.newHashMap();
 
+  @Getter
   private Map<String, FieldFilter> ageFilters = Maps.newHashMap();
 
   private Map<String, FieldRS> birthFilterFields = Maps.newHashMap();

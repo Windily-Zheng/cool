@@ -23,7 +23,9 @@ import com.nus.cool.core.cohort.aggregator.Aggregator;
 import com.nus.cool.core.cohort.aggregator.SumAggregator;
 import com.nus.cool.core.cohort.aggregator.UserCountAggregator;
 import com.nus.cool.core.cohort.filter.FieldFilter;
+import com.nus.cool.core.cohort.filter.RangeFieldFilter;
 import com.nus.cool.core.io.cache.CacheKey;
+import com.nus.cool.core.io.cache.CacheKeyType;
 import com.nus.cool.core.io.cache.CacheManager;
 import com.nus.cool.core.io.readstore.ChunkRS;
 import com.nus.cool.core.io.readstore.FieldRS;
@@ -33,6 +35,7 @@ import com.nus.cool.core.io.storevector.InputVector;
 import com.nus.cool.core.io.storevector.RLEInputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
+import com.nus.cool.core.util.Range;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -352,6 +355,159 @@ public class CohortAggregation implements Operator {
       }
       long filterEnd = System.nanoTime();
       totalFilterTime += (filterEnd - filterStart);
+
+      // Filter Cache
+      Map<String, FieldFilter> ageFilters = this.sigma.getAgeFilters();
+      for (Map.Entry<String, FieldFilter> entry : ageFilters.entrySet()) {
+        if (entry.getValue() instanceof RangeFieldFilter) {
+          // Proper range of filter range length
+          // TODO: Need to get from Controller
+          Range filterRangeLength = new Range(100, 10000);
+
+          FieldFilter fieldFilter = entry.getValue();
+          int[] minValues = ((RangeFieldFilter) fieldFilter).getMinValues();
+          int[] maxValues = ((RangeFieldFilter) fieldFilter).getMaxValues();
+
+          // 1. Load: Load cache
+          // Construct cache keys
+          // TODO: Suppose one filter one range first, need to deal with multiple ranges
+//          long loadStart = System.nanoTime();
+          List<CacheKey> cacheKeys = Lists.newArrayList();
+          Range searchedRange = new Range(minValues[0], maxValues[0]);
+          CacheKey searchedKey = new CacheKey(CacheKeyType.FILTER, cubletFileName, entry.getKey(),
+              chunk.getChunkID(), searchedRange);
+          cacheKeys.add(searchedKey);
+
+          // Load cache
+          Map<CacheKey, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+//          long loadEnd = System.nanoTime();
+//          totalLoadTime += (loadEnd - loadStart);
+
+          // 2. Reuse Cases
+          // Exact/Subsuming/Partial Reuse
+          if (cachedBitsets.size() == 1) {
+            for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
+              Range cachedRange = en.getKey().getRange();
+              BitSet cachedBitset = en.getValue();
+              // Exact Reuse
+              if (searchedRange.compareTo(cachedRange) == 0) {
+                bv.and(cachedBitset);
+              }
+              // Subsuming Reuse (searchedRange is smaller than cachedRange)
+              else if (searchedRange.compareTo(cachedRange) == -1) {
+                // Traverse InputVector for further filtering
+                FieldRS ageField = loadField(chunk, entry.getKey());
+                InputVector ageInput = ageField.getValueVector();
+                int off = 0;
+                // Search in bit=1
+                off = cachedBitset.nextSetBit(off);
+                while (off < ageInput.size() && off >= 0) {
+                  ageInput.skipTo(off);
+                  if (!fieldFilter.accept(ageInput.next())) {
+                    cachedBitset.clear(off);
+                  }
+                  off = cachedBitset.nextSetBit(off + 1);
+                }
+
+                // Get filter result
+                bv.and(cachedBitset);
+
+                // Caching filter bitset
+                if (filterRangeLength.contains(searchedRange.getLength()) && !filterRangeLength
+                    .contains(cachedRange.getLength())) {
+                  cacheManager.remove(en.getKey(), storageLevel);
+                  cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+                }
+              }
+              // Partial Reuse (searchedRange is larger than cachedRange)
+              else if (searchedRange.compareTo(cachedRange) == 1) {
+                // Traverse InputVector to add qualified records
+                FieldRS ageField = loadField(chunk, entry.getKey());
+                InputVector ageInput = ageField.getValueVector();
+                int off = 0;
+                // Search in bit=0
+                off = cachedBitset.nextClearBit(off);
+                while (off < ageInput.size() && off >= 0) {
+                  ageInput.skipTo(off);
+                  if (fieldFilter.accept(ageInput.next())) {
+                    cachedBitset.set(off);
+                  }
+                  off = cachedBitset.nextClearBit(off + 1);
+                }
+
+                // Get filter result
+                bv.and(cachedBitset);
+
+                // Caching filter bitset
+                if (filterRangeLength.contains(searchedRange.getLength()) && !filterRangeLength
+                    .contains(cachedRange.getLength())) {
+                  cacheManager.remove(en.getKey(), storageLevel);
+                  cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+                }
+              }
+            }
+          }
+          // Partial Reuse (more than one candidate range)
+          else if (cachedBitsets.size() > 1) {
+            boolean allNotInFilterRangeLength = true;
+            BitSet cachedBitset = new BitSet(chunk.getRecords());
+            Range cachedRange = null;
+            for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
+              if (cachedRange == null) {
+                cachedRange = en.getKey().getRange();
+              } else if (cachedRange.compareTo(en.getKey().getRange()) != 2) {
+                cachedRange.union(en.getKey().getRange());
+              }
+              cachedBitset.or(en.getValue());
+              if (filterRangeLength.contains(en.getKey().getRange().getLength())) {
+                allNotInFilterRangeLength = false;
+              }
+            }
+
+            // Traverse InputVector to add qualified records
+            if (!searchedRange.equals(cachedRange)) {
+              FieldRS ageField = loadField(chunk, entry.getKey());
+              InputVector ageInput = ageField.getValueVector();
+              int off = 0;
+              // Search in bit=0
+              off = cachedBitset.nextClearBit(off);
+              while (off < ageInput.size() && off >= 0) {
+                ageInput.skipTo(off);
+                if (fieldFilter.accept(ageInput.next())) {
+                  cachedBitset.set(off);
+                }
+                off = cachedBitset.nextClearBit(off + 1);
+              }
+            }
+
+            // Get filter result
+            bv.and(cachedBitset);
+
+            // Caching filter bitset
+            if (filterRangeLength.contains(searchedRange.getLength()) && allNotInFilterRangeLength) {
+              for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
+                cacheManager.remove(en.getKey(), storageLevel);
+              }
+              cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+            }
+          }
+          // No Reuse
+          else if (cachedBitsets.size() == 0) {
+            BitSet filterBitSet = new BitSet(chunk.getRecords());
+            FieldRS ageField = loadField(chunk, entry.getKey());
+            InputVector ageInput = ageField.getValueVector();
+            ageInput.skipTo(0);
+            for (int i = 0; i < ageInput.size(); i++) {
+              if (fieldFilter.accept(ageInput.next())) {
+                filterBitSet.set(i);
+              }
+            }
+            // Get filter result
+            bv.and(filterBitSet);
+            cacheManager.addToCacheBitsets(searchedKey, filterBitSet, storageLevel);
+          }
+        }
+      }
     }
 
     while (appInput.hasNext()) {
@@ -402,9 +558,13 @@ public class CohortAggregation implements Operator {
             int ageOff = birthOff + 1;
             if (ageOff < end) {
               long selectionStart = System.nanoTime();
-              if (reuse) {
-                this.sigma.selectAgeActivitiesUsingBitset(birthOff + 1, end, bv);
-              } else {
+//              if (reuse) {
+//                this.sigma.selectAgeActivitiesUsingBitset(birthOff + 1, end, bv);
+//              } else {
+//                bv.set(birthOff + 1, end);
+//                this.sigma.selectAgeActivities(birthOff + 1, end, bv);
+//              }
+              if (!reuse) {
                 bv.set(birthOff + 1, end);
                 this.sigma.selectAgeActivities(birthOff + 1, end, bv);
               }

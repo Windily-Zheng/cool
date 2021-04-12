@@ -459,6 +459,8 @@ public class IcebergSelection {
               filterBitSet.set(i);
             }
           }
+          // Get filter result
+          bs.and(filterBitSet);
           cacheManager.addToCacheBitsets(searchedKey, filterBitSet, storageLevel);
         }
       } else {
