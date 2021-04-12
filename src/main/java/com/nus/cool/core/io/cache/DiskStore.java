@@ -90,6 +90,7 @@ public class DiskStore {
               }
             }
           });
+          rangeSet.add(cacheKey.getRange());
           rangeCacheKeys.put(prefix, rangeSet);
         }
       }
@@ -215,6 +216,7 @@ public class DiskStore {
             }
           }
         });
+        rangeSet.add(cacheKey.getRange());
         rangeCacheKeys.put(prefix, rangeSet);
       }
     }
@@ -228,6 +230,19 @@ public class DiskStore {
     if (blockSizes.containsKey(cacheKey)) {
       usedDiskSize -= blockSizes.get(cacheKey);
       blockSizes.remove(cacheKey);
+      File cacheFile = new File(cacheRoot, cacheKey.getFileName());
+      if (cacheFile.exists()) {
+        cacheFile.delete();
+      }
+
+      // Remove from rangeCacheKeys
+      CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
+      if (rangeCacheKeys.containsKey(prefix)) {
+        rangeCacheKeys.get(prefix).remove(cacheKey.getRange());
+        if (rangeCacheKeys.get(prefix).isEmpty()) {
+          rangeCacheKeys.remove(prefix);
+        }
+      }
       return true;
     }
     return false;

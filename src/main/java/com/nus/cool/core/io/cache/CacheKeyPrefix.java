@@ -45,13 +45,13 @@ public class CacheKeyPrefix {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CacheKey)) {
+    if (!(o instanceof CacheKeyPrefix)) {
       return false;
     }
-    CacheKey cacheKey = (CacheKey) o;
-    return this.type.equals(cacheKey.getType()) && this.cubletFileName
-        .equals(cacheKey.getCubletFileName()) && this.fieldName.equals(cacheKey.getFieldName())
-        && cacheKey.getChunkID() == this.chunkID;
+    CacheKeyPrefix prefix = (CacheKeyPrefix) o;
+    return this.type.equals(prefix.getType()) && this.cubletFileName
+        .equals(prefix.getCubletFileName()) && this.fieldName.equals(prefix.getFieldName())
+        && prefix.getChunkID() == this.chunkID;
   }
 
   @Override

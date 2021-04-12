@@ -135,6 +135,7 @@ public class MemoryStore {
             }
           }
         });
+        rangeSet.add(cacheKey.getRange());
         rangeCacheKeys.put(prefix, rangeSet);
       }
     }
@@ -146,6 +147,16 @@ public class MemoryStore {
   public boolean remove(CacheKey cacheKey) {
     if (entries.containsKey(cacheKey)) {
       usedMemorySize -= entries.get(cacheKey).size();
+      entries.remove(cacheKey);
+
+      // Remove from rangeCacheKeys
+      CacheKeyPrefix prefix = new CacheKeyPrefix(cacheKey);
+      if (rangeCacheKeys.containsKey(prefix)) {
+        rangeCacheKeys.get(prefix).remove(cacheKey.getRange());
+        if (rangeCacheKeys.get(prefix).isEmpty()) {
+          rangeCacheKeys.remove(prefix);
+        }
+      }
       return true;
     }
     return false;

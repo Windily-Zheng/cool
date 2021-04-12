@@ -61,16 +61,16 @@ public class CacheManager {
     totalNum += cacheKeys.size();
     if ("MEMORY_ONLY".equals(storageLevel)) {
       Map<CacheKey, BitSet> cachedBitsets = memoryStore.load(cacheKeys);
-      hitNum += cachedBitsets.size();
+      hitNum += (cachedBitsets.size() <= cacheKeys.size() ? cachedBitsets.size() : cacheKeys.size());
       return cachedBitsets;
     } else if ("DISK_ONLY".equals(storageLevel)) {
       Map<CacheKey, BitSet> cachedBitsets = diskStore.load(cacheKeys);
-      hitNum += cachedBitsets.size();
+      hitNum += (cachedBitsets.size() <= cacheKeys.size() ? cachedBitsets.size() : cacheKeys.size());
       return cachedBitsets;
     } else if ("MEMORY_AND_DISK".equals(storageLevel)) {
       Map<CacheKey, BitSet> cachedBitsets = memoryStore.load(cacheKeys);
       // Only count the hit number of memory cache
-      hitNum += cachedBitsets.size();
+      hitNum += (cachedBitsets.size() <= cacheKeys.size() ? cachedBitsets.size() : cacheKeys.size());
       if (cachedBitsets.size() < cacheKeys.size()) {
         List<CacheKey> missingCacheKeys = Lists.newArrayList();
         for (CacheKey cacheKey : cacheKeys) {

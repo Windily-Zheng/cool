@@ -29,7 +29,7 @@ public class Controller {
     coolModel = new CoolModel(args[0]);
     coolModel.reload(args[1]);
 
-    double memoryCacheSize = (double) 100 * 1024 * 1024;
+    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
     cacheManager = new CacheManager(args[0] + "/" + args[2], memoryCacheSize, diskCacheSize,
         0.8);

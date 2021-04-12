@@ -323,7 +323,7 @@ public class IcebergSelection {
       } else if (reuse && !field.isSetField()) {
         // Proper range of filter range length
         // TODO: Need to get from Controller
-        Range filterRangeLength = new Range(100, 10000);
+        Range filterRangeLength = new Range(300, 1000);
 
         FieldFilter fieldFilter = selectionFilter.getFilter();
         int[] minValues = ((RangeFieldFilter) fieldFilter).getMinValues();
@@ -352,10 +352,13 @@ public class IcebergSelection {
             BitSet cachedBitset = entry.getValue();
             // Exact Reuse
             if (searchedRange.compareTo(cachedRange) == 0) {
+              System.out.println("Exact Reuse");
               bs.and(cachedBitset);
             }
             // Subsuming Reuse (searchedRange is smaller than cachedRange)
             else if (searchedRange.compareTo(cachedRange) == -1) {
+              System.out.println("Subsuming Reuse");
+
               // Traverse InputVector for further filtering
               InputVector fieldIn = field.getValueVector();
               int off = 0;
@@ -381,6 +384,8 @@ public class IcebergSelection {
             }
             // Partial Reuse (searchedRange is larger than cachedRange)
             else if (searchedRange.compareTo(cachedRange) == 1) {
+              System.out.println("Partial Reuse");
+
               // Traverse InputVector to add qualified records
               InputVector fieldIn = field.getValueVector();
               int off = 0;
@@ -408,6 +413,8 @@ public class IcebergSelection {
         }
         // Partial Reuse (more than one candidate range)
         else if (cachedBitsets.size() > 1) {
+          System.out.println("Multiple Partial Reuse");
+
           boolean allNotInFilterRangeLength = true;
           BitSet cachedBitset = new BitSet(chunk.getRecords());
           Range cachedRange = null;
@@ -451,6 +458,8 @@ public class IcebergSelection {
         }
         // No Reuse
         else if (cachedBitsets.size() == 0) {
+          System.out.println("No Reuse");
+
           BitSet filterBitSet = new BitSet(chunk.getRecords());
           InputVector fieldIn = field.getValueVector();
           fieldIn.skipTo(0);
