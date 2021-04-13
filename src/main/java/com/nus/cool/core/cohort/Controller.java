@@ -35,7 +35,7 @@ public class Controller {
         0.8);
 
     // TODO: Need to get from query
-    String queryType = "Iceberg";
+    String queryType = "Cohort";
 
     if ("Iceberg".equals(queryType)) {
       icebergLoader = new IcebergLoader();
@@ -96,7 +96,7 @@ public class Controller {
 
       long cachingTime = 0;
       long queryTime = 0;
-//    int count = 1;
+      int count = 1;
 
       for (CohortQuery query : queries) {
         long queryStart = System.nanoTime();
@@ -116,7 +116,7 @@ public class Controller {
 //      QueryResult result = QueryResult.ok(resultTuples);
 //      System.out.println("Q[" + count + "]: ");
 //      System.out.println(result.toString());
-//      count++;
+        count++;
       }
 
       double aveQueryTime = queryTime / queries.size();
@@ -125,7 +125,7 @@ public class Controller {
 //    double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
 //    double aveGenerateTime = CohortProcessor.totalGenerateTime / queries.size();
       double aveFilterTime = CohortProcessor.totalFilterTime / queries.size();
-//    double aveCachingTime = cachingTime / queries.size();
+      double aveCachingTime = cachingTime / queries.size();
       double aveSelectionTime =
           CohortProcessor.totalSeekTime + CohortProcessor.totalSelectionTime / queries.size();
       double aveAggregationTime = CohortProcessor.totalAggregationTime / queries.size();
@@ -142,15 +142,14 @@ public class Controller {
 //        aveGenerateTime / 1000000);
       System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
           aveFilterTime / 1000000);
-//    System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
-//        aveCachingTime / 1000000);
       System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
           aveSelectionTime / 1000000);
       System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
           aveAggregationTime / 1000000);
-      System.out
-          .printf("Hit rate: %.2f%%\n",
-              CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
+      System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
+          aveCachingTime / 1000000);
+      System.out.printf("Hit rate: %.2f%%\n",
+          CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     }
 
     coolModel.close();

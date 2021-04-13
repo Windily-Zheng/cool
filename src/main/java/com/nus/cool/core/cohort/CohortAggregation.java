@@ -391,10 +391,13 @@ public class CohortAggregation implements Operator {
               BitSet cachedBitset = en.getValue();
               // Exact Reuse
               if (searchedRange.compareTo(cachedRange) == 0) {
+                System.out.println("Exact Reuse");
                 bv.and(cachedBitset);
               }
               // Subsuming Reuse (searchedRange is smaller than cachedRange)
               else if (searchedRange.compareTo(cachedRange) == -1) {
+                System.out.println("Subsuming Reuse");
+
                 // Traverse InputVector for further filtering
                 FieldRS ageField = loadField(chunk, entry.getKey());
                 InputVector ageInput = ageField.getValueVector();
@@ -421,6 +424,8 @@ public class CohortAggregation implements Operator {
               }
               // Partial Reuse (searchedRange is larger than cachedRange)
               else if (searchedRange.compareTo(cachedRange) == 1) {
+                System.out.println("Partial Reuse");
+
                 // Traverse InputVector to add qualified records
                 FieldRS ageField = loadField(chunk, entry.getKey());
                 InputVector ageInput = ageField.getValueVector();
@@ -449,6 +454,8 @@ public class CohortAggregation implements Operator {
           }
           // Partial Reuse (more than one candidate range)
           else if (cachedBitsets.size() > 1) {
+            System.out.println("Multiple Partial Reuse");
+
             boolean allNotInFilterRangeLength = true;
             BitSet cachedBitset = new BitSet(chunk.getRecords());
             Range cachedRange = null;
@@ -493,6 +500,8 @@ public class CohortAggregation implements Operator {
           }
           // No Reuse
           else if (cachedBitsets.size() == 0) {
+            System.out.println("No Reuse");
+
             BitSet filterBitSet = new BitSet(chunk.getRecords());
             FieldRS ageField = loadField(chunk, entry.getKey());
             InputVector ageInput = ageField.getValueVector();

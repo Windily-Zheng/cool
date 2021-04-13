@@ -42,8 +42,9 @@ public class CohortProcessor {
   public List<ResultTuple> executeQuery(CubeRS cube, CohortQuery query, CacheManager cacheManager)
       throws IOException {
     // TODO: Need to get from query
-    boolean reuse = false;
-    String storageLevel = "MEMORY_ONLY";
+    boolean reuse = true;
+    String storageLevel = "DISK_ONLY";
+    System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
     TableSchema schema = cube.getSchema();
