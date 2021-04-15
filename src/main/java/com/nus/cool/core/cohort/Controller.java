@@ -35,7 +35,7 @@ public class Controller {
         0.8);
 
     // TODO: Need to get from query
-    String queryType = "Cohort";
+    String queryType = "Iceberg";
 
     if ("Iceberg".equals(queryType)) {
       icebergLoader = new IcebergLoader();

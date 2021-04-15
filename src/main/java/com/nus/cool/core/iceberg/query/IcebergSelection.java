@@ -562,36 +562,255 @@ public class IcebergSelection {
         bv.set(0, chunk.getRecords());
         map.put(this.timeRanges.get(tag), bv);
       } else {
-        InputVector timeInput = timeField.getValueVector();
-        timeInput.skipTo(0);
-        BitSet[] bitSets = new BitSet[this.timeRanges.size()];
-        for (int i = 0; i < this.timeRanges.size(); i++) {
-          bitSets[i] = new BitSet(chunk.getRecords());
-        }
-        int min = this.mins.get(tag);
-        int max = this.maxs.get(tag);
-        for (int i = 0; i < timeInput.size(); i++) {
-          int time = timeInput.next();
-          if (time < this.min) {
-            continue;
-          }
-          if (time > this.max) {
-            break;
-          }
-          if (time >= min && time <= max) {
-            bitSets[tag].set(i);
-          } else {
-            while (!(time >= this.mins.get(tag) && (time <= this.maxs.get(tag)))) {
-              tag += 1;
+        if (reuse) {
+          // Proper range of filter range length
+          // TODO: Need to get from Controller
+          Range timeRangeLength = new Range(0, 500);
+
+          String timeFieldName = this.tableSchema.getActionTimeFieldName();
+          InputVector timeInput = timeField.getValueVector();
+          int pos = 0;
+
+          while (tag < this.mins.size()) {
+            // 1. Load: Load time cache
+            // Construct cache keys
+            List<CacheKey> cacheKeys = Lists.newArrayList();
+            Range searchedRange = new Range(this.mins.get(tag), this.maxs.get(tag));
+            CacheKey searchedKey = new CacheKey(CacheKeyType.TIME, cubletFileName, timeFieldName,
+                chunk.getChunkID(), searchedRange);
+            cacheKeys.add(searchedKey);
+
+            // Load Cache
+            Map<CacheKey, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+
+            // 2. Reuse Cases
+            // Exact/Subsuming/Partial Reuse
+            if (cachedBitsets.size() == 1) {
+              for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+                Range cachedRange = entry.getKey().getRange();
+                BitSet cachedBitset = entry.getValue();
+                // Exact Reuse
+                if (searchedRange.compareTo(cachedRange) == 0) {
+                  System.out.println("Exact Reuse");
+                  if (cachedBitset.cardinality() != 0) {
+                    map.put(this.timeRanges.get(tag), cachedBitset);
+                  }
+                  tag += 1;
+                  pos = cachedBitset.length();
+                }
+                // Subsuming Reuse (searchedRange is smaller than cachedRange)
+                else if (searchedRange.compareTo(cachedRange) == -1) {
+                  System.out.println("Subsuming Reuse");
+
+                  // Traverse InputVector for further filtering
+                  // Search in bit=1
+                  int min = this.mins.get(tag);
+                  int max = this.maxs.get(tag);
+
+                  pos = cachedBitset.nextSetBit(pos);
+                  timeInput.skipTo(pos);
+                  for (; pos < timeInput.size(); pos++) {
+                    int time = timeInput.next();
+                    if (time < min) {
+                      cachedBitset.clear(pos);
+                      continue;
+                    }
+                    if (time > max) {
+                      cachedBitset.clear(pos, cachedBitset.length());
+
+                      if (cachedBitset.cardinality() != 0) {
+                        map.put(this.timeRanges.get(tag), cachedBitset);
+                      }
+
+                      // Caching filter bitset
+                      if (timeRangeLength.contains(searchedRange.getLength()) && !timeRangeLength
+                          .contains(cachedRange.getLength())) {
+                        cacheManager.remove(entry.getKey(), storageLevel);
+                        cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+                      }
+
+                      while (tag < this.mins.size() && !(time >= this.mins.get(tag) && (time
+                          <= this.maxs.get(tag)))) {
+                        tag += 1;
+                      }
+                      break;
+                    }
+                  }
+                }
+                // Partial Reuse (searchedRange is larger than cachedRange)
+                else if (searchedRange.compareTo(cachedRange) == 1) {
+                  System.out.println("Partial Reuse");
+
+                  // Traverse InputVector to add qualified records
+                  int min = this.mins.get(tag);
+                  int max = this.maxs.get(tag);
+
+                  // Search in bit=0
+                  pos = cachedBitset.nextClearBit(pos);
+                  timeInput.skipTo(pos);
+                  for (; pos < timeInput.size(); pos++) {
+                    int time = timeInput.next();
+                    if (time < min) {
+                      continue;
+                    }
+                    if (cachedBitset.get(pos)) {
+                      pos = cachedBitset.nextClearBit(pos + 1);
+                      timeInput.skipTo(pos);
+                      time = timeInput.next();
+                      if (time <= max) {
+                        cachedBitset.set(pos);
+                      }
+                      continue;
+                    }
+                    if (time > max) {
+                      if (cachedBitset.cardinality() != 0) {
+                        map.put(this.timeRanges.get(tag), cachedBitset);
+                      }
+
+                      // Caching filter bitset
+                      if (timeRangeLength.contains(searchedRange.getLength()) && !timeRangeLength
+                          .contains(cachedRange.getLength())) {
+                        cacheManager.remove(entry.getKey(), storageLevel);
+                        cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+                      }
+
+                      while (tag < this.mins.size() && !(time >= this.mins.get(tag) && (time
+                          <= this.maxs.get(tag)))) {
+                        tag += 1;
+                      }
+                      break;
+                    }
+                    cachedBitset.set(pos);
+                  }
+                }
+              }
             }
-            min = this.mins.get(tag);
-            max = this.maxs.get(tag);
-            bitSets[tag].set(i);
+            // Partial Reuse (more than one candidate range)
+            else if (cachedBitsets.size() > 1) {
+              System.out.println("Multiple Partial Reuse");
+
+              boolean allNotInTimeRangeLength = true;
+              BitSet cachedBitset = new BitSet(chunk.getRecords());
+              Range cachedRange = null;
+              for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+                if (cachedRange == null) {
+                  cachedRange = entry.getKey().getRange();
+                } else if (cachedRange.compareTo(entry.getKey().getRange()) != 2) {
+                  cachedRange.union(entry.getKey().getRange());
+                }
+                cachedBitset.or(entry.getValue());
+                if (timeRangeLength.contains(entry.getKey().getRange().getLength())) {
+                  allNotInTimeRangeLength = false;
+                }
+              }
+
+              // Traverse InputVector to add qualified records
+              if (!searchedRange.equals(cachedRange)) {
+                // Traverse InputVector to add qualified records
+                int min = this.mins.get(tag);
+                int max = this.maxs.get(tag);
+
+                // Search in bit=0
+                pos = cachedBitset.nextClearBit(pos);
+                timeInput.skipTo(pos);
+                for (; pos < timeInput.size(); pos++) {
+                  int time = timeInput.next();
+                  if (time < min) {
+                    continue;
+                  }
+                  if (cachedBitset.get(pos)) {
+                    pos = cachedBitset.nextClearBit(pos + 1);
+                    timeInput.skipTo(pos);
+                    time = timeInput.next();
+                    if (time <= max) {
+                      cachedBitset.set(pos);
+                    }
+                    continue;
+                  }
+                  if (time > max) {
+                    if (cachedBitset.cardinality() != 0) {
+                      map.put(this.timeRanges.get(tag), cachedBitset);
+                    }
+
+                    // Caching filter bitset
+                    if (timeRangeLength.contains(searchedRange.getLength()) && allNotInTimeRangeLength) {
+                      for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
+                        cacheManager.remove(entry.getKey(), storageLevel);
+                      }
+                      cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
+                    }
+
+                    while (tag < this.mins.size() && !(time >= this.mins.get(tag) && (time
+                        <= this.maxs.get(tag)))) {
+                      tag += 1;
+                    }
+                    break;
+                  }
+                  cachedBitset.set(pos);
+                }
+              }
+            }
+            // No Reuse
+            else if (cachedBitsets.size() == 0) {
+              System.out.println("No Reuse");
+
+              BitSet filterBitSet = new BitSet(chunk.getRecords());
+              timeInput.skipTo(pos);
+
+              for (; pos < timeInput.size(); pos++) {
+                int time = timeInput.next();
+                if (time < min) {
+                  continue;
+                }
+                if (time > max) {
+                  if (filterBitSet.cardinality() != 0) {
+                    map.put(this.timeRanges.get(tag), filterBitSet);
+                  }
+
+                  cacheManager.addToCacheBitsets(searchedKey, filterBitSet, storageLevel);
+
+                  while (tag < this.mins.size() && !(time >= this.mins.get(tag) && (time
+                      <= this.maxs.get(tag)))) {
+                    tag += 1;
+                  }
+                  break;
+                }
+                filterBitSet.set(pos);
+              }
+            }
           }
-        }
-        for (int i = 0; i < bitSets.length; i++) {
-          if (bitSets[i].cardinality() != 0) {
-            map.put(this.timeRanges.get(i), bitSets[i]);
+        } else {
+          InputVector timeInput = timeField.getValueVector();
+          timeInput.skipTo(0);
+          BitSet[] bitSets = new BitSet[this.timeRanges.size()];
+          for (int i = 0; i < this.timeRanges.size(); i++) {
+            bitSets[i] = new BitSet(chunk.getRecords());
+          }
+          int min = this.mins.get(tag);
+          int max = this.maxs.get(tag);
+          for (int i = 0; i < timeInput.size(); i++) {
+            int time = timeInput.next();
+            if (time < this.min) {
+              continue;
+            }
+            if (time > this.max) {
+              break;
+            }
+            if (time >= min && time <= max) {
+              bitSets[tag].set(i);
+            } else {
+              while (!(time >= this.mins.get(tag) && (time <= this.maxs.get(tag)))) {
+                tag += 1;
+              }
+              min = this.mins.get(tag);
+              max = this.maxs.get(tag);
+              bitSets[tag].set(i);
+            }
+          }
+          for (int i = 0; i < bitSets.length; i++) {
+            if (bitSets[i].cardinality() != 0) {
+              map.put(this.timeRanges.get(i), bitSets[i]);
+            }
           }
         }
       }
