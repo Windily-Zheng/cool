@@ -58,7 +58,7 @@ public class LocalLoader {
     File outputDir = new File(cubeRoot, args[1]);
     int chunkSize = 10000000;
 
-    double memoryCacheSize = (double) 10 * 1024 * 1024 * 1024;
+    double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
 
     cacheManager = new CacheManager(args[2], memoryCacheSize, diskCacheSize, 0.8);

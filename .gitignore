@@ -11,3 +11,6 @@ storage/
 query/
 iceberg-query/
 new-storage/
+old-query/
+old-storage/
+old-test/

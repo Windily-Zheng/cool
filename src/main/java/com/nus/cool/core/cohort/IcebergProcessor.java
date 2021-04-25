@@ -39,7 +39,7 @@ public class IcebergProcessor {
       CacheManager cacheManager) throws IOException, ParseException {
     // TODO: Need to get from query
     boolean reuse = true;
-    String storageLevel = "DISK_ONLY";
+    String storageLevel = "MEMORY_ONLY";
     System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
