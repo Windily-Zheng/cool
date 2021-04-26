@@ -125,6 +125,7 @@ public class CacheManager {
       CacheEntry cacheEntry = entry.getKey();
       put(cacheEntry.getCacheKey(), cacheEntry.getBitSet(), entry.getValue());
     }
+    toCacheBitsets.clear();
   }
 
   private void initMemoryFromDisk() throws IOException {

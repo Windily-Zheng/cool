@@ -26,26 +26,33 @@ public class Range {
     checkArgument(this.min <= this.max);
   }
 
-  public int compareTo(Range range) {
+  public Range(Range range) {
+    checkNotNull(range);
+    this.min = range.getMin();
+    this.max = range.getMax();
+    checkArgument(this.min <= this.max);
+  }
+
+  public RangeCase compareTo(Range range) {
     checkNotNull(range);
     // exact: 0
     if (min == range.getMin() && max == range.getMax()) {
-      return 0;
+      return RangeCase.EXACT;
     }
     // less than (subsuming): -1
     if (min >= range.getMin() && max <= range.getMax()) {
-      return -1;
+      return RangeCase.SUBSUMING;
     }
     // larger than (partial): 1
     if (min <= range.getMin() && max >= range.getMax()) {
-      return 1;
+      return RangeCase.PARTIAL;
     }
     // no overlap: 2
     if (range.getMax() < min || range.getMin() > max) {
-      return 2;
+      return RangeCase.NOOVERLAP;
     }
     // overlap: 3
-    return 3;
+    return RangeCase.OVERLAP;
   }
 
   public int getLength() {
@@ -59,12 +66,12 @@ public class Range {
   public void union(Range range) {
     checkNotNull(range);
     // No overlap => Can't union
-    if (this.compareTo(range) != 2) {
-      if (range.getMin() < min) {
-        min = range.getMin();
+    if (this.compareTo(range) != RangeCase.NOOVERLAP) {
+      if (range.getMin() < this.min) {
+        this.min = range.getMin();
       }
-      if (range.getMax() > max) {
-        max = range.getMax();
+      if (range.getMax() > this.max) {
+        this.max = range.getMax();
       }
     }
   }

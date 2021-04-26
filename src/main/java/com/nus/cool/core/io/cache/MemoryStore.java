@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import com.nus.cool.core.io.cache.utils.BubbleLRULinkedHashMap;
 import com.nus.cool.core.io.cache.utils.HashMap;
 import com.nus.cool.core.util.Range;
+import com.nus.cool.core.util.RangeCase;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -58,14 +59,14 @@ public class MemoryStore {
 
           // Get candidate CacheKeys (exact/partial/subsuming)
           Set<CacheKey> candidateKeys = new HashSet<>();
-          int min = cacheKey.getRange().getMin();
-          int max = cacheKey.getRange().getMax();
+          Range searchedRange = cacheKey.getRange();
+          Range minSubsuming = null;
           for (Range range : rangeSet) {
-            if (range.getMin() >= max) {
+            if (range.getMin() >= searchedRange.getMax()) {
               break;
             }
             // Exact Reuse Case
-            if (range.getMin() == min && range.getMax() == max) {
+            if (searchedRange.compareTo(range) == RangeCase.EXACT) {
               // Clear potential other reuse cases stored previously
               candidateKeys.clear();
               CacheKey candidateKey = new CacheKey(prefix, range);
@@ -73,15 +74,18 @@ public class MemoryStore {
               break;
             }
             // Subsuming Reuse Case
-            if (range.getMin() <= min && range.getMax() >= max) {
-              // Clear potential partial reuse cases stored previously
-              candidateKeys.clear();
+            if (searchedRange.compareTo(range) == RangeCase.SUBSUMING) {
               CacheKey candidateKey = new CacheKey(prefix, range);
-              candidateKeys.add(candidateKey);
-              break;
+              /* Clear potential partial reuse cases stored previously ||
+                 Replace subsuming range stored previously with a smaller range */
+              if (minSubsuming == null || range.getLength() < minSubsuming.getLength()) {
+                candidateKeys.clear();
+                minSubsuming = range;
+                candidateKeys.add(candidateKey);
+              }
             }
             // Partial Reuse Case
-            if (range.getMin() >= min && range.getMax() <= max) {
+            if (searchedRange.compareTo(range) == RangeCase.PARTIAL) {
               CacheKey candidateKey = new CacheKey(prefix, range);
               candidateKeys.add(candidateKey);
             }

@@ -34,6 +34,7 @@ import com.nus.cool.core.io.storevector.InputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import com.nus.cool.core.util.Range;
+import com.nus.cool.core.util.RangeCase;
 import com.nus.cool.core.util.converter.DayIntConverter;
 import java.io.IOException;
 import java.text.ParseException;
@@ -323,7 +324,7 @@ public class IcebergSelection {
       } else if (reuse && !field.isSetField()) {
         // Proper range of filter range length
         // TODO: Need to get from Controller
-        Range filterRangeLength = new Range(1, 5000);
+        Range filterRangeLength = new Range(100, 5000);
         boolean printFilterCache = false;
 
         FieldFilter fieldFilter = selectionFilter.getFilter();
@@ -352,17 +353,21 @@ public class IcebergSelection {
             Range cachedRange = entry.getKey().getRange();
             BitSet cachedBitset = entry.getValue();
             // Exact Reuse
-            if (searchedRange.compareTo(cachedRange) == 0) {
+            if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
               if (printFilterCache) {
                 System.out.println("Filter Level Cache: Exact Reuse");
               }
               bs.and(cachedBitset);
             }
             // Subsuming Reuse (searchedRange is smaller than cachedRange)
-            else if (searchedRange.compareTo(cachedRange) == -1) {
+            else if (searchedRange.compareTo(cachedRange) == RangeCase.SUBSUMING) {
               if (printFilterCache) {
                 System.out.println("Filter Level Cache: Subsuming Reuse");
               }
+
+              // TODO: For test
+//              System.out.println("Time bitset: " + bs.cardinality());
+//              System.out.println("Cached bitset: " + cachedBitset.cardinality());
 
               // Traverse InputVector for further filtering
               long generateStart = System.nanoTime();
@@ -393,7 +398,7 @@ public class IcebergSelection {
               }
             }
             // Partial Reuse (searchedRange is larger than cachedRange)
-            else if (searchedRange.compareTo(cachedRange) == 1) {
+            else if (searchedRange.compareTo(cachedRange) == RangeCase.PARTIAL) {
               if (printFilterCache) {
                 System.out.println("Filter Level Cache: Partial Reuse");
               }
@@ -437,8 +442,11 @@ public class IcebergSelection {
           Range cachedRange = null;
           for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
             if (cachedRange == null) {
-              cachedRange = entry.getKey().getRange();
-            } else if (cachedRange.compareTo(entry.getKey().getRange()) != 2) {
+              /* Can't directly use "cachedRange = entry.getKey().getRange()" !!
+                 (Otherwise the range in cache will also be changed) */
+              cachedRange = new Range(entry.getKey().getRange());
+            } else if (cachedRange.compareTo(entry.getKey().getRange()) != RangeCase.NOOVERLAP) {
+              // Not "no overlap" => union
               cachedRange.union(entry.getKey().getRange());
             }
             cachedBitset.or(entry.getValue());
@@ -615,7 +623,7 @@ public class IcebergSelection {
                 Range cachedRange = entry.getKey().getRange();
                 BitSet cachedBitset = entry.getValue();
                 // Exact Reuse
-                if (searchedRange.compareTo(cachedRange) == 0) {
+                if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
                   if (printTimeCache) {
                     System.out.println("Time Level Cache: Exact Reuse");
                   }
@@ -626,7 +634,7 @@ public class IcebergSelection {
                   pos = cachedBitset.length();
                 }
                 // Subsuming Reuse (searchedRange is smaller than cachedRange)
-                else if (searchedRange.compareTo(cachedRange) == -1) {
+                else if (searchedRange.compareTo(cachedRange) == RangeCase.SUBSUMING) {
                   if (printTimeCache) {
                     System.out.println("Time Level Cache: Subsuming Reuse");
                   }
@@ -674,7 +682,7 @@ public class IcebergSelection {
                   }
                 }
                 // Partial Reuse (searchedRange is larger than cachedRange)
-                else if (searchedRange.compareTo(cachedRange) == 1) {
+                else if (searchedRange.compareTo(cachedRange) == RangeCase.PARTIAL) {
                   if (printTimeCache) {
                     System.out.println("Time Level Cache: Partial Reuse");
                   }
@@ -743,7 +751,8 @@ public class IcebergSelection {
               for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
                 if (cachedRange == null) {
                   cachedRange = entry.getKey().getRange();
-                } else if (cachedRange.compareTo(entry.getKey().getRange()) != 2) {
+                } else if (cachedRange.compareTo(entry.getKey().getRange())
+                    != RangeCase.NOOVERLAP) {
                   cachedRange.union(entry.getKey().getRange());
                 }
                 cachedBitset.or(entry.getValue());

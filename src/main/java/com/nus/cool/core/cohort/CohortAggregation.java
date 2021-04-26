@@ -36,6 +36,7 @@ import com.nus.cool.core.io.storevector.RLEInputVector;
 import com.nus.cool.core.schema.FieldType;
 import com.nus.cool.core.schema.TableSchema;
 import com.nus.cool.core.util.Range;
+import com.nus.cool.core.util.RangeCase;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -390,12 +391,12 @@ public class CohortAggregation implements Operator {
               Range cachedRange = en.getKey().getRange();
               BitSet cachedBitset = en.getValue();
               // Exact Reuse
-              if (searchedRange.compareTo(cachedRange) == 0) {
+              if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
                 System.out.println("Exact Reuse");
                 bv.and(cachedBitset);
               }
               // Subsuming Reuse (searchedRange is smaller than cachedRange)
-              else if (searchedRange.compareTo(cachedRange) == -1) {
+              else if (searchedRange.compareTo(cachedRange) == RangeCase.SUBSUMING) {
                 System.out.println("Subsuming Reuse");
 
                 // Traverse InputVector for further filtering
@@ -423,7 +424,7 @@ public class CohortAggregation implements Operator {
                 }
               }
               // Partial Reuse (searchedRange is larger than cachedRange)
-              else if (searchedRange.compareTo(cachedRange) == 1) {
+              else if (searchedRange.compareTo(cachedRange) == RangeCase.PARTIAL) {
                 System.out.println("Partial Reuse");
 
                 // Traverse InputVector to add qualified records
@@ -462,7 +463,7 @@ public class CohortAggregation implements Operator {
             for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
               if (cachedRange == null) {
                 cachedRange = en.getKey().getRange();
-              } else if (cachedRange.compareTo(en.getKey().getRange()) != 2) {
+              } else if (cachedRange.compareTo(en.getKey().getRange()) != RangeCase.NOOVERLAP) {
                 cachedRange.union(en.getKey().getRange());
               }
               cachedBitset.or(en.getValue());
