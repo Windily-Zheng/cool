@@ -462,7 +462,9 @@ public class CohortAggregation implements Operator {
             Range cachedRange = null;
             for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
               if (cachedRange == null) {
-                cachedRange = en.getKey().getRange();
+                /* Can't directly use "cachedRange = entry.getKey().getRange()" !!
+                 (Otherwise the range in cache will also be changed) */
+                cachedRange = new Range(en.getKey().getRange());
               } else if (cachedRange.compareTo(en.getKey().getRange()) != RangeCase.NOOVERLAP) {
                 cachedRange.union(en.getKey().getRange());
               }
