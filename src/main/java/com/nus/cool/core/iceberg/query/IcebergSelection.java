@@ -351,13 +351,20 @@ public class IcebergSelection {
         if (cachedBitsets.size() == 1) {
           for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
             Range cachedRange = entry.getKey().getRange();
-            BitSet cachedBitset = entry.getValue();
+            /* Can't directly use "BitSet cachedBitset = entry.getValue();" !!!
+               Otherwise the bitset in cache will also be changed!
+             */
+            BitSet cachedBitset = new BitSet(chunk.getRecords());
+            cachedBitset.or(entry.getValue());
             // Exact Reuse
             if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
               if (printFilterCache) {
                 System.out.println("Filter Level Cache: Exact Reuse");
               }
+              long filterStart = System.nanoTime();
               bs.and(cachedBitset);
+              long filterEnd = System.nanoTime();
+              totalFilterTime += (filterEnd - filterStart);
             }
             // Subsuming Reuse (searchedRange is smaller than cachedRange)
             else if (searchedRange.compareTo(cachedRange) == RangeCase.SUBSUMING) {
@@ -374,20 +381,20 @@ public class IcebergSelection {
               InputVector fieldIn = field.getValueVector();
               int off = 0;
               // Search in bit=1
-              off = bs.nextSetBit(off);
+              off = cachedBitset.nextSetBit(off);
 
               while (off < fieldIn.size() && off >= 0) {
                 fieldIn.skipTo(off);
                 if (!fieldFilter.accept(fieldIn.next())) {
                   cachedBitset.clear(off);
-                  bs.clear(off);
                 }
-                off = bs.nextSetBit(off + 1);
+                off = cachedBitset.nextSetBit(off + 1);
               }
               long generateEnd = System.nanoTime();
               totalGenerateTime += (generateEnd - generateStart);
 
               // Get time filter result
+              long filterStart = System.nanoTime();
               bs.and(cachedBitset);
 
               // Caching filter bitset
@@ -396,6 +403,8 @@ public class IcebergSelection {
                 cacheManager.remove(entry.getKey(), storageLevel);
                 cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
               }
+              long filterEnd = System.nanoTime();
+              totalFilterTime += (filterEnd - filterStart);
             }
             // Partial Reuse (searchedRange is larger than cachedRange)
             else if (searchedRange.compareTo(cachedRange) == RangeCase.PARTIAL) {
@@ -420,6 +429,7 @@ public class IcebergSelection {
               totalGenerateTime += (generateEnd - generateStart);
 
               // Get time filter result
+              long filterStart = System.nanoTime();
               bs.and(cachedBitset);
 
               // Caching filter bitset
@@ -428,6 +438,8 @@ public class IcebergSelection {
                 cacheManager.remove(entry.getKey(), storageLevel);
                 cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
               }
+              long filterEnd = System.nanoTime();
+              totalFilterTime += (filterEnd - filterStart);
             }
           }
         }
@@ -437,13 +449,15 @@ public class IcebergSelection {
             System.out.println("Filter Level Cache: Multiple Partial Reuse");
           }
 
+          long generateStart = System.nanoTime();
           boolean allNotInFilterRangeLength = true;
           BitSet cachedBitset = new BitSet(chunk.getRecords());
           Range cachedRange = null;
           for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
             if (cachedRange == null) {
-              /* Can't directly use "cachedRange = entry.getKey().getRange()" !!
-                 (Otherwise the range in cache will also be changed) */
+              /* Can't directly use "cachedRange = entry.getKey().getRange();" !!!
+                 Otherwise the range in cache will also be changed!
+               */
               cachedRange = new Range(entry.getKey().getRange());
             } else if (cachedRange.compareTo(entry.getKey().getRange()) != RangeCase.NOOVERLAP) {
               // Not "no overlap" => union
@@ -456,7 +470,6 @@ public class IcebergSelection {
           }
 
           // Traverse InputVector to add qualified records
-          long generateStart = System.nanoTime();
           if (!searchedRange.equals(cachedRange)) {
             InputVector fieldIn = field.getValueVector();
             int off = 0;
@@ -474,6 +487,7 @@ public class IcebergSelection {
           totalGenerateTime += (generateEnd - generateStart);
 
           // Get filter result
+          long filterStart = System.nanoTime();
           bs.and(cachedBitset);
 
           // Caching filter bitset
@@ -483,6 +497,8 @@ public class IcebergSelection {
             }
             cacheManager.addToCacheBitsets(searchedKey, cachedBitset, storageLevel);
           }
+          long filterEnd = System.nanoTime();
+          totalFilterTime += (filterEnd - filterStart);
         }
         // No Reuse
         else if (cachedBitsets.size() == 0) {
@@ -502,7 +518,12 @@ public class IcebergSelection {
           long generateEnd = System.nanoTime();
           totalGenerateTime += (generateEnd - generateStart);
 
+          // Get filter result
+          long filterStart = System.nanoTime();
+          bs.and(filterBitSet);
           cacheManager.addToCacheBitsets(searchedKey, filterBitSet, storageLevel);
+          long filterEnd = System.nanoTime();
+          totalFilterTime += (filterEnd - filterStart);
         }
       } else {
         long filterStart = System.nanoTime();
@@ -621,7 +642,11 @@ public class IcebergSelection {
             if (cachedBitsets.size() == 1) {
               for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
                 Range cachedRange = entry.getKey().getRange();
-                BitSet cachedBitset = entry.getValue();
+                /* Can't directly use "BitSet cachedBitset = entry.getValue();" !!!
+                   Otherwise the bitset in cache will also be changed!
+                 */
+                BitSet cachedBitset = new BitSet(chunk.getRecords());
+                cachedBitset.or(entry.getValue());
                 // Exact Reuse
                 if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
                   if (printTimeCache) {
@@ -750,7 +775,10 @@ public class IcebergSelection {
               Range cachedRange = null;
               for (Map.Entry<CacheKey, BitSet> entry : cachedBitsets.entrySet()) {
                 if (cachedRange == null) {
-                  cachedRange = entry.getKey().getRange();
+                  /* Can't directly use "cachedRange = entry.getKey().getRange();" !!!
+                     Otherwise the range in cache will also be changed!
+                   */
+                  cachedRange = new Range(entry.getKey().getRange());
                 } else if (cachedRange.compareTo(entry.getKey().getRange())
                     != RangeCase.NOOVERLAP) {
                   cachedRange.union(entry.getKey().getRange());

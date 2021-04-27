@@ -389,7 +389,11 @@ public class CohortAggregation implements Operator {
           if (cachedBitsets.size() == 1) {
             for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
               Range cachedRange = en.getKey().getRange();
-              BitSet cachedBitset = en.getValue();
+              /* Can't directly use "BitSet cachedBitset = en.getValue();" !!!
+                 Otherwise the bitset in cache will also be changed!
+               */
+              BitSet cachedBitset = new BitSet(chunk.getRecords());
+              cachedBitset.or(en.getValue());
               // Exact Reuse
               if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
                 System.out.println("Exact Reuse");
@@ -462,8 +466,9 @@ public class CohortAggregation implements Operator {
             Range cachedRange = null;
             for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
               if (cachedRange == null) {
-                /* Can't directly use "cachedRange = entry.getKey().getRange()" !!
-                 (Otherwise the range in cache will also be changed) */
+                /* Can't directly use "cachedRange = entry.getKey().getRange();" !!!
+                   Otherwise the range in cache will also be changed!
+                 */
                 cachedRange = new Range(en.getKey().getRange());
               } else if (cachedRange.compareTo(en.getKey().getRange()) != RangeCase.NOOVERLAP) {
                 cachedRange.union(en.getKey().getRange());

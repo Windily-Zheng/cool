@@ -72,23 +72,15 @@ public class Controller {
       double aveFilterTime = IcebergProcessor.totalFilterTime / queries.size();
       double aveCachingTime = cachingTime / queries.size();
 
-      System.out
-          .printf("Average Query Time: %.2f ns => %.3f ms\n", aveQueryTime, aveQueryTime / 1000000);
-      System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
-          aveSelectionTime / 1000000);
-      System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
-          aveAggregationTime / 1000000);
-      System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
-          aveFilterTime / 1000000);
-      System.out
-          .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
-      System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
-          aveGenerateTime / 1000000);
-      System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
-          aveCachingTime / 1000000);
-      System.out
-          .printf("Hit rate: %.2f%%\n",
-              CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
+      System.out.printf("Average Query Time: %.3f ms\n", aveQueryTime / 1000000);
+      System.out.printf("Average Selection Time: %.3f ms\n", aveSelectionTime / 1000000);
+      System.out.printf("Average Aggregation Time: %.3f ms\n", aveAggregationTime / 1000000);
+      System.out.printf("Average Load Time: %.3f ms\n", aveLoadTime / 1000000);
+      System.out.printf("Average Generate Time: %.3f ms\n", aveGenerateTime / 1000000);
+      System.out.printf("Average Filter Time: %.3f ms\n", aveFilterTime / 1000000);
+      System.out.printf("Average Caching Time: %.3f ms\n", aveCachingTime / 1000000);
+      System.out.printf("Hit rate: %.2f%%\n",
+          CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     } else if ("Cohort".equals(queryType)) {
       cohortLoader = new CohortLoader();
       cohortProcessor = new CohortProcessor();
