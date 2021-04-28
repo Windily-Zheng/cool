@@ -91,6 +91,9 @@ public class IcebergSelection {
   // for testing
   public double totalSelectionTime;
 
+  // for testing
+  public double totalTimeFilterTime;
+
   private void splitTimeRange() throws ParseException {
     // TODO: format time range
     this.timeRanges = new ArrayList<>();
@@ -582,6 +585,7 @@ public class IcebergSelection {
       totalGenerateTime = 0;
       totalFilterTime = 0;
       totalSelectionTime = 0;
+      totalTimeFilterTime = 0;
     }
   }
 
@@ -602,6 +606,7 @@ public class IcebergSelection {
     if (!(accept(minKey, maxKey) && process(this.filter, chunk))) {
       return null;
     }
+    long timeFilterStart = System.nanoTime();
     Map<String, BitSet> map = new HashMap<>();
     if (this.timeRange == null) {
       map.put("no time filter", bitSet);
@@ -618,7 +623,7 @@ public class IcebergSelection {
         if (reuse) {
           // Proper range of filter range length
           // TODO: Need to get from Controller
-          Range timeRangeLength = new Range(0, 500);
+          Range timeRangeLength = new Range(1, 20);
           boolean printTimeCache = false;
 
           String timeFieldName = this.tableSchema.getActionTimeFieldName();
@@ -628,6 +633,7 @@ public class IcebergSelection {
           while (tag < this.mins.size()) {
             // 1. Load: Load time cache
             // Construct cache keys
+            long loadStart = System.nanoTime();
             List<CacheKey> cacheKeys = Lists.newArrayList();
             Range searchedRange = new Range(this.mins.get(tag), this.maxs.get(tag));
             CacheKey searchedKey = new CacheKey(CacheKeyType.TIME, cubletFileName, timeFieldName,
@@ -636,6 +642,8 @@ public class IcebergSelection {
 
             // Load Cache
             Map<CacheKey, BitSet> cachedBitsets = cacheManager.load(cacheKeys, storageLevel);
+            long loadEnd = System.nanoTime();
+            totalLoadTime += (loadEnd - loadStart);
 
             // 2. Reuse Cases
             // Exact/Subsuming/Partial Reuse
@@ -646,7 +654,10 @@ public class IcebergSelection {
                    Otherwise the bitset in cache will also be changed!
                  */
                 BitSet cachedBitset = new BitSet(chunk.getRecords());
+                long filterStart = System.nanoTime();
                 cachedBitset.or(entry.getValue());
+                long filterEnd = System.nanoTime();
+                totalFilterTime += (filterEnd - filterStart);
                 // Exact Reuse
                 if (searchedRange.compareTo(cachedRange) == RangeCase.EXACT) {
                   if (printTimeCache) {
@@ -666,6 +677,7 @@ public class IcebergSelection {
 
                   // Traverse InputVector for further filtering
                   // Search in bit=1
+                  long generateStart = System.nanoTime();
                   int min = this.mins.get(tag);
                   int max = this.maxs.get(tag);
 
@@ -705,6 +717,8 @@ public class IcebergSelection {
                       break;
                     }
                   }
+                  long generateEnd = System.nanoTime();
+                  totalGenerateTime += (generateEnd - generateStart);
                 }
                 // Partial Reuse (searchedRange is larger than cachedRange)
                 else if (searchedRange.compareTo(cachedRange) == RangeCase.PARTIAL) {
@@ -713,6 +727,7 @@ public class IcebergSelection {
                   }
 
                   // Traverse InputVector to add qualified records
+                  long generateStart = System.nanoTime();
                   int min = this.mins.get(tag);
                   int max = this.maxs.get(tag);
 
@@ -761,6 +776,8 @@ public class IcebergSelection {
                     }
                     cachedBitset.set(pos);
                   }
+                  long generateEnd = System.nanoTime();
+                  totalGenerateTime += (generateEnd - generateStart);
                 }
               }
             }
@@ -770,6 +787,7 @@ public class IcebergSelection {
                 System.out.println("Time Level Cache: Multiple Partial Reuse");
               }
 
+              long generateStart = System.nanoTime();
               boolean allNotInTimeRangeLength = true;
               BitSet cachedBitset = new BitSet(chunk.getRecords());
               Range cachedRange = null;
@@ -843,6 +861,8 @@ public class IcebergSelection {
                   cachedBitset.set(pos);
                 }
               }
+              long generateEnd = System.nanoTime();
+              totalGenerateTime += (generateEnd - generateStart);
             }
             // No Reuse
             else if (cachedBitsets.size() == 0) {
@@ -850,6 +870,7 @@ public class IcebergSelection {
                 System.out.println("Time Level Cache: No Reuse");
               }
 
+              long generateStart = System.nanoTime();
               int min = this.mins.get(tag);
               int max = this.maxs.get(tag);
 
@@ -883,6 +904,8 @@ public class IcebergSelection {
                 }
                 filterBitSet.set(pos);
               }
+              long generateEnd = System.nanoTime();
+              totalGenerateTime += (generateEnd - generateStart);
             }
             tag++;
           }
@@ -924,12 +947,11 @@ public class IcebergSelection {
         }
       }
     }
+    long timeFilterEnd = System.nanoTime();
+    totalTimeFilterTime += (timeFilterEnd - timeFilterStart);
+
     for (Map.Entry<String, BitSet> entry : map.entrySet()) {
       long selectionStart = System.nanoTime();
-
-      // TODO: For test
-//      System.out.println(entry.getValue().cardinality());
-
       BitSet bs = select(this.filter, chunk, entry.getValue(), reuse, cacheManager, storageLevel,
           cubletFileName);
       long selectionEnd = System.nanoTime();

@@ -65,6 +65,7 @@ public class Controller {
       }
 
       double aveQueryTime = queryTime / queries.size();
+      double aveTimeFilterTime = IcebergProcessor.totaltimeFilterTime / queries.size();
       double aveSelectionTime = IcebergProcessor.totalSelectionTime / queries.size();
       double aveAggregationTime = IcebergProcessor.totalAggregationTime / queries.size();
       double aveLoadTime = IcebergProcessor.totalLoadTime / queries.size();
@@ -72,15 +73,16 @@ public class Controller {
       double aveFilterTime = IcebergProcessor.totalFilterTime / queries.size();
       double aveCachingTime = cachingTime / queries.size();
 
+      System.out.printf("Hit rate: %.2f%%\n",
+          CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
       System.out.printf("Average Query Time: %.3f ms\n", aveQueryTime / 1000000);
+      System.out.printf("Average Time Filter Time: %.3f ms\n", aveTimeFilterTime / 1000000);
       System.out.printf("Average Selection Time: %.3f ms\n", aveSelectionTime / 1000000);
       System.out.printf("Average Aggregation Time: %.3f ms\n", aveAggregationTime / 1000000);
       System.out.printf("Average Load Time: %.3f ms\n", aveLoadTime / 1000000);
       System.out.printf("Average Generate Time: %.3f ms\n", aveGenerateTime / 1000000);
       System.out.printf("Average Filter Time: %.3f ms\n", aveFilterTime / 1000000);
       System.out.printf("Average Caching Time: %.3f ms\n", aveCachingTime / 1000000);
-      System.out.printf("Hit rate: %.2f%%\n",
-          CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
     } else if ("Cohort".equals(queryType)) {
       cohortLoader = new CohortLoader();
       cohortProcessor = new CohortProcessor();

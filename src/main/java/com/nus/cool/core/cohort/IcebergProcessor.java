@@ -35,6 +35,9 @@ public class IcebergProcessor {
   // for testing
   public static double totalAggregationTime = 0;
 
+  // for testing
+  public static double totaltimeFilterTime = 0;
+
   public static List<BaseResult> executeQuery(CubeRS cube, IcebergQuery query,
       CacheManager cacheManager) throws IOException, ParseException {
     // TODO: Need to get from query
@@ -93,6 +96,7 @@ public class IcebergProcessor {
         totalGenerateTime += selection.totalGenerateTime;
         totalFilterTime += selection.totalFilterTime;
         totalSelectionTime += selection.totalSelectionTime;
+        totaltimeFilterTime += selection.totalTimeFilterTime;
       }
     }
     results = BaseResult.merge(results);
