@@ -57,16 +57,21 @@ public class CohortLoader {
     ObjectMapper mapper = new ObjectMapper();
     List<CohortQuery> queries = Lists.newArrayList();
 
-    String loaderType = "Local";
+    String loaderType = "Server";
 
     if ("Local".equals(loaderType)) {
-      String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/query/";
-      String fileName = queryRoot + "q4.json";
-      CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
-      queries.add(query);
+      String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/cohort-query/filter/";
+//      String fileName = queryRoot + "q4.json";
+//      CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+//      queries.add(query);
+      for (int i = 1; i <= 10; i++) {
+        String fileName = queryRoot + "query" + i + ".json";
+        CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);
+        queries.add(query);
+      }
     }
     else if ("Server".equals(loaderType)) {
-      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/query/";
+      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/cohort-query/filter/";
       for (int i = 1; i <= 10; i++) {
         String fileName = queryRoot + "query" + i + ".json";
         CohortQuery query = mapper.readValue(new File(fileName), CohortQuery.class);

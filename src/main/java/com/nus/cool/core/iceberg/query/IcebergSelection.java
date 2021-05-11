@@ -375,10 +375,6 @@ public class IcebergSelection {
                 System.out.println("Filter Level Cache: Subsuming Reuse");
               }
 
-              // TODO: For test
-//              System.out.println("Time bitset: " + bs.cardinality());
-//              System.out.println("Cached bitset: " + cachedBitset.cardinality());
-
               // Traverse InputVector for further filtering
               long generateStart = System.nanoTime();
               InputVector fieldIn = field.getValueVector();

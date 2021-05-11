@@ -46,8 +46,7 @@ public class IcebergLoader {
     String loaderType = "Server";
 
     if ("Local".equals(loaderType)) {
-//      String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/iceberg-query/filter/";
-      String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/iceberg-query/time/";
+      String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/iceberg-query/hybrid/";
 //      String fileName = queryRoot + "iceberg-query5.json";
 //      IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);
 //      queries.add(query);
@@ -58,11 +57,7 @@ public class IcebergLoader {
       }
     }
     else if ("Server".equals(loaderType)) {
-//      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query/";
-//      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query2/";
-//      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query/filter/";
-      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query/time/";
-
+      String queryRoot = "/home/zju/zhengzhiyi/Cool/cool/iceberg-query/hybrid/";
       for (int i = 1; i <= 10; i++) {
         String fileName = queryRoot + "query" + i + ".json";
         IcebergQuery query = mapper.readValue(new File(fileName), IcebergQuery.class);

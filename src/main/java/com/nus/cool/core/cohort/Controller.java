@@ -35,7 +35,7 @@ public class Controller {
         0.8);
 
     // TODO: Need to get from query
-    String queryType = "Iceberg";
+    String queryType = "Cohort";
 
     if ("Iceberg".equals(queryType)) {
       icebergLoader = new IcebergLoader();
@@ -99,9 +99,6 @@ public class Controller {
         long queryEnd = System.nanoTime();
         queryTime += (queryEnd - queryStart);
 
-//      System.out.println("Q[" + count + "]: ");
-//      System.out.printf("%.3f ms\n", (double)(queryEnd - queryStart) / 1000000);
-
         long cachingStart = System.nanoTime();
         cacheManager.caching();
         long cachingEnd = System.nanoTime();
@@ -114,36 +111,28 @@ public class Controller {
       }
 
       double aveQueryTime = queryTime / queries.size();
-//    double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
-//    double aveSelectionTime = CohortProcessor.totalSelectionTime / queries.size();
-//    double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
-//    double aveGenerateTime = CohortProcessor.totalGenerateTime / queries.size();
+      double aveSeekTime = CohortProcessor.totalSeekTime / queries.size();
+      double aveSelectionTime = CohortProcessor.totalSelectionTime / queries.size();
+      double aveAggregationTime = CohortProcessor.totalAggregationTime / queries.size();
+      double aveLoadTime = CohortProcessor.totalLoadTime / queries.size();
+      double aveGenerateTime = CohortProcessor.totalGenerateTime / queries.size();
       double aveFilterTime = CohortProcessor.totalFilterTime / queries.size();
       double aveCachingTime = cachingTime / queries.size();
-      double aveSelectionTime =
-          CohortProcessor.totalSeekTime + CohortProcessor.totalSelectionTime / queries.size();
-      double aveAggregationTime = CohortProcessor.totalAggregationTime / queries.size();
+//      double aveSelectionTime =
+//          CohortProcessor.totalSeekTime + CohortProcessor.totalSelectionTime / queries.size();
 
-      System.out
-          .printf("Average Query Time: %.2f ns => %.3f ms\n", aveQueryTime, aveQueryTime / 1000000);
-//    System.out
-//        .printf("Average Seek Time: %.2f ns => %.3f ms\n", aveSeekTime, aveSeekTime / 1000000);
-//    System.out.printf("Average Age Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
-//        aveSelectionTime / 1000000);
-//    System.out
-//        .printf("Average Load Time: %.2f ns => %.3f ms\n", aveLoadTime, aveLoadTime / 1000000);
-//    System.out.printf("Average Generate Time: %.2f ns => %.3f ms\n", aveGenerateTime,
-//        aveGenerateTime / 1000000);
-      System.out.printf("Average Filter Time: %.2f ns => %.3f ms\n", aveFilterTime,
-          aveFilterTime / 1000000);
-      System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
-          aveSelectionTime / 1000000);
-      System.out.printf("Average Aggregation Time: %.2f ns => %.3f ms\n", aveAggregationTime,
-          aveAggregationTime / 1000000);
-      System.out.printf("Average Caching Time: %.2f ns => %.3f ms\n", aveCachingTime,
-          aveCachingTime / 1000000);
       System.out.printf("Hit rate: %.2f%%\n",
           CacheManager.getHitNum() / CacheManager.getTotalNum() * 100);
+      System.out.printf("Average Query Time: %.3f ms\n", aveQueryTime / 1000000);
+      System.out.printf("Average Seek Time: %.3f ms\n", aveSeekTime / 1000000);
+      System.out.printf("Average Age Selection Time: %.3f ms\n", aveSelectionTime / 1000000);
+      System.out.printf("Average Aggregation Time: %.3f ms\n", aveAggregationTime / 1000000);
+      System.out.printf("Average Load Time: %.3f ms\n", aveLoadTime / 1000000);
+      System.out.printf("Average Generate Time: %.3f ms\n", aveGenerateTime / 1000000);
+      System.out.printf("Average Filter Time: %.3f ms\n", aveFilterTime / 1000000);
+//      System.out.printf("Average Selection Time: %.2f ns => %.3f ms\n", aveSelectionTime,
+//          aveSelectionTime / 1000000);
+      System.out.printf("Average Caching Time: %.3f ms\n", aveCachingTime / 1000000);
     }
 
     coolModel.close();

@@ -43,7 +43,7 @@ public class CohortProcessor {
       throws IOException {
     // TODO: Need to get from query
     boolean reuse = true;
-    String storageLevel = "DISK_ONLY";
+    String storageLevel = "MEMORY_ONLY";
     System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
