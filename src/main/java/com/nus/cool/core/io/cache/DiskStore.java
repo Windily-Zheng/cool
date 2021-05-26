@@ -38,8 +38,8 @@ public class DiskStore {
 
   private double usedDiskSize;
 
-  //  private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
-  private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
+    private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
+//  private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
 
   private Map<CacheKeyPrefix, SortedSet<Range>> rangeCacheKeys = new java.util.HashMap<>();
 

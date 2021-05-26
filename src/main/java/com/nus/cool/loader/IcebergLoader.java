@@ -43,7 +43,7 @@ public class IcebergLoader {
     ObjectMapper mapper = new ObjectMapper();
     List<IcebergQuery> queries = Lists.newArrayList();
 
-    String loaderType = "Server";
+    String loaderType = "Local";
 
     if ("Local".equals(loaderType)) {
       String queryRoot = "/Users/zhiyi/Desktop/Cool/cool/iceberg-query/hybrid/";

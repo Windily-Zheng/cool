@@ -120,14 +120,21 @@ public class CacheKey {
 
   @Override
   public String toString() {
+//    if (type == CacheKeyType.VALUE) {
+//      return String
+//          .format("type = %s, cublet = %s, field = %s, chunkID = %d, localID = %d", type.toString(),
+//              cubletFileName, fieldName, chunkID, localID);
+//    } else {
+//      return String
+//          .format("type = %s, cublet = %s, field = %s, chunkID = %d, range = %s", type.toString(),
+//              cubletFileName, fieldName, chunkID, range.toString());
+//    }
     if (type == CacheKeyType.VALUE) {
       return String
-          .format("type = %s, cublet = %s, field = %s, chunkID = %d, localID = %d", type.toString(),
-              cubletFileName, fieldName, chunkID, localID);
+          .format("%s_%s_%s_%d_%d", type.toString(), cubletFileName, fieldName, chunkID, localID);
     } else {
-      return String
-          .format("type = %s, cublet = %s, field = %s, chunkID = %d, range = %s", type.toString(),
-              cubletFileName, fieldName, chunkID, range.toString());
+      return String.format("%s_%s_%s_%d_%s", type.toString(), cubletFileName, fieldName, chunkID,
+          range.toString());
     }
   }
 }

@@ -64,6 +64,8 @@ public class CohortAggregation implements Operator {
 
   private int[] bBirthActionChunkIDs;
 
+  private Map<Integer, Integer> nextSetBits = Maps.newLinkedHashMap();
+
   @Getter
   private BitSet bs;
 
@@ -143,12 +145,14 @@ public class CohortAggregation implements Operator {
     FieldRS cohortField = loadField(chunk, this.query.getCohortFields()[0]);
     FieldRS metricField = loadField(chunk, this.query.getMetric());
     this.bBirthActionChunkIDs = new int[this.birthActionGlobalIDs.length];
+    this.nextSetBits.clear();
     for (int i = 0; i < this.birthActionGlobalIDs.length; i++) {
       int id = actionField.getKeyVector().find(this.birthActionGlobalIDs[i]);
       if (id < 0) {
         return;
       }
       this.bBirthActionChunkIDs[i] = id;
+      this.nextSetBits.put(id, 0);
     }
 
     int min = cohortField.minKey();
@@ -303,11 +307,8 @@ public class CohortAggregation implements Operator {
       }
       long generateEnd = System.nanoTime();
       totalGenerateTime += (generateEnd - generateStart);
-      selectionEnd = System.nanoTime();
-      totalSelectionTime += (selectionEnd - selectionStart);
 
       // 3. Filter: Search matched rows
-      selectionStart = System.nanoTime();
       long filterStart = System.nanoTime();
       Map<String, BitSet> fieldMatchedRows = Maps.newLinkedHashMap();
       for (Map.Entry<String, Map<Integer, BitSet>> entry : cachedAgeBitsets.entrySet()) {
@@ -673,12 +674,32 @@ public class CohortAggregation implements Operator {
     int pos = begin - 1;
 
     for (int id : this.bBirthActionChunkIDs) {
+      // Not optimized
       BitSet bitSet = bitSetList.get(id);
       int newPos = bitSet.nextSetBit(pos + 1);
       if (newPos < 0 || newPos >= end) {
         return end;
       }
       pos = newPos;
+
+      // Optimized
+//      int setBit = this.nextSetBits.get(id);
+//      if (setBit < 0 || setBit >= end) {
+//        return end;
+//      }
+//      else if (setBit > 0 && setBit >= begin) {
+//        pos = setBit;
+//      }
+//      else {
+//        BitSet bitSet = bitSetList.get(id);
+//        int newPos = bitSet.nextSetBit(pos + 1);
+//        this.nextSetBits.put(id, newPos);
+//        if (newPos < 0 || newPos >= end) {
+//          return end;
+//        }
+//        pos = newPos;
+//      }
+
     }
     return pos;
   }

@@ -28,7 +28,7 @@ public class CacheManager {
 
   public CacheManager(String cacheRoot, double memoryCacheSize, double diskCacheSize,
       double entryCacheLimit) throws IOException {
-    memoryStore = new MemoryStore(memoryCacheSize, entryCacheLimit);
+    memoryStore = new MemoryStore(cacheRoot, memoryCacheSize, entryCacheLimit);
     diskStore = new DiskStore(cacheRoot, diskCacheSize, entryCacheLimit);
     toCacheBitsets = Maps.newHashMap();
     hitNum = 0;
@@ -100,7 +100,7 @@ public class CacheManager {
     }
   }
 
-  public void remove(CacheKey cacheKey, String storageLevel) {
+  public void remove(CacheKey cacheKey, String storageLevel) throws IOException {
     checkNotNull(storageLevel);
     if ("MEMORY_ONLY".equals(storageLevel)) {
       memoryStore.remove(cacheKey);
