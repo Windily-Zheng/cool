@@ -205,6 +205,9 @@ public class CohortAggregation implements Operator {
         cachedBirthBitsets.put(entry.getKey().getLocalID(), entry.getValue());
       }
 
+      // TODO: For test
+//      System.out.println("Birth cache loaded: " + cachedBirthBitsets.size());
+
       // Construct age selection cacheKeys
       long selectionStart = System.nanoTime();
       Map<String, BitSet> ageFilterBitsets = this.sigma.getAgeFilterBitsets();
@@ -228,6 +231,9 @@ public class CohortAggregation implements Operator {
           cachedAgeFieldBitsets.put(en.getKey().getLocalID(), en.getValue());
         }
         cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
+
+        // TODO: For test
+//        System.out.println("Age cache loaded: " + cachedAgeFieldBitsets.size());
       }
       long loadEnd = System.nanoTime();
       totalLoadTime += (loadEnd - loadStart);
@@ -247,16 +253,40 @@ public class CohortAggregation implements Operator {
           }
         }
 
-        // Traverse actionInput to generate missing birth bitsets
-        int pos = 0;
+        // TODO: Optimize
+        // TODO: For test
+        long traverseStart = System.nanoTime();
+        BitSet birthBitset = new BitSet(chunk.getRecords());
+        for (Map.Entry<Integer, BitSet> en : cachedBirthBitsets.entrySet()) {
+          birthBitset.or(en.getValue());
+        }
+        // Search in bit=0
+        int pos = birthBitset.nextClearBit(0);
         actionInput.skipTo(pos);
-        while (actionInput.hasNext()) {
+        while (pos < actionInput.size() && pos >= 0) {
+          actionInput.skipTo(pos);
           int key = actionInput.next();
           if (toCacheBirthBitsets.containsKey(key)) {
             toCacheBirthBitsets.get(key).set(pos);
           }
-          pos++;
+          pos = birthBitset.nextClearBit(pos + 1);
         }
+        // TODO: For test
+        long traverseEnd = System.nanoTime();
+//        System.out
+//            .printf("Birth Traverse Time: %.3f ms\n",
+//                (double) (traverseEnd - traverseStart) / 1000000);
+
+        // Traverse actionInput to generate missing birth bitsets
+//        int pos = 0;
+//        actionInput.skipTo(pos);
+//        while (actionInput.hasNext()) {
+//          int key = actionInput.next();
+//          if (toCacheBirthBitsets.containsKey(key)) {
+//            toCacheBirthBitsets.get(key).set(pos);
+//          }
+//          pos++;
+//        }
 
         // Add missing birth bitsets to cache
         for (Map.Entry<Integer, BitSet> entry : toCacheBirthBitsets.entrySet()) {
@@ -274,6 +304,9 @@ public class CohortAggregation implements Operator {
         Map<Integer, BitSet> cachedAgeFieldBitsets = cachedAgeBitsets.get(entry.getKey());
         if (cachedAgeFieldBitsets.size() < ageIDSet.size()) {
           Map<Integer, BitSet> toCacheAgeBitsets = Maps.newLinkedHashMap();
+
+          // TODO: For test
+//          long checkStart = System.nanoTime();
           // Check missing birth localIDs
           for (int id : ageIDSet) {
             if (!cachedAgeFieldBitsets.containsKey(id)) {
@@ -281,20 +314,62 @@ public class CohortAggregation implements Operator {
               toCacheAgeBitsets.put(id, bitSet);
             }
           }
+          // TODO: For test
+//          long checkEnd = System.nanoTime();
+//          System.out.printf("Check Time: %.3f ms\n", (double) (checkEnd - checkStart) / 1000000);
 
-          // Traverse InputVector to generate missing age bitsets
+          // TODO: Optimize
+          BitSet fieldBitset = new BitSet(chunk.getRecords());
+          for (Map.Entry<Integer, BitSet> en : cachedAgeFieldBitsets.entrySet()) {
+            fieldBitset.or(en.getValue());
+          }
+
+          // Avoid repeating the or operation in the subsequent filter process
+          cachedAgeFieldBitsets.clear();
+          cachedAgeFieldBitsets.put(-1, fieldBitset);
+
+          // TODO: For test
+          long traverseStart = System.nanoTime();
+          // Traverse fieldBitset to generate missing age bitsets
           FieldRS ageField = loadField(chunk, entry.getKey());
           InputVector ageInput = ageField.getValueVector();
-          int pos = 0;
+          // Search in bit=0
+          int pos = fieldBitset.nextClearBit(0);
           ageInput.skipTo(pos);
-          while (ageInput.hasNext()) {
+          while (pos < ageInput.size() && pos >= 0) {
+            ageInput.skipTo(pos);
             int key = ageInput.next();
             if (toCacheAgeBitsets.containsKey(key)) {
               toCacheAgeBitsets.get(key).set(pos);
             }
-            pos++;
+            pos = fieldBitset.nextClearBit(pos + 1);
           }
+          // TODO: For test
+          long traverseEnd = System.nanoTime();
+//          System.out
+//              .printf("Age Traverse Time: %.3f ms\n",
+//                  (double) (traverseEnd - traverseStart) / 1000000);
 
+          // TODO: For test
+//          long traverseStart = System.nanoTime();
+//          // Traverse InputVector to generate missing age bitsets
+//          FieldRS ageField = loadField(chunk, entry.getKey());
+//          InputVector ageInput = ageField.getValueVector();
+//          int pos = 0;
+//          ageInput.skipTo(pos);
+//          while (ageInput.hasNext()) {
+//            int key = ageInput.next();
+//            if (toCacheAgeBitsets.containsKey(key)) {
+//              toCacheAgeBitsets.get(key).set(pos);
+//            }
+//            pos++;
+//          }
+//          // TODO: For test
+//          long traverseEnd = System.nanoTime();
+//          System.out.printf("Traverse Time: %.3f ms\n", (double)(traverseEnd - traverseStart) / 1000000);
+
+          // TODO: For test
+//          long addStart = System.nanoTime();
           // Add missing age bitsets to cache
           for (Map.Entry<Integer, BitSet> en : toCacheAgeBitsets.entrySet()) {
             CacheKey cacheKey = new CacheKey(cubletFileName, entry.getKey(), chunk.getChunkID(),
@@ -303,10 +378,18 @@ public class CohortAggregation implements Operator {
             cachedAgeFieldBitsets.put(en.getKey(), en.getValue());
           }
           cachedAgeBitsets.put(entry.getKey(), cachedAgeFieldBitsets);
+
+          // TODO: For test
+//          long addEnd = System.nanoTime();
+//          System.out.printf("Add Time: %.3f ms\n", (double) (addEnd - addStart) / 1000000);
         }
       }
       long generateEnd = System.nanoTime();
       totalGenerateTime += (generateEnd - generateStart);
+
+      // TODO: For test
+//      System.out
+//          .printf("Generate Time: %.3f ms\n", (double) (generateEnd - generateStart) / 1000000);
 
       // 3. Filter: Search matched rows
       long filterStart = System.nanoTime();
@@ -497,7 +580,8 @@ public class CohortAggregation implements Operator {
             bv.and(cachedBitset);
 
             // Caching filter bitset
-            if (filterRangeLength.contains(searchedRange.getLength()) && allNotInFilterRangeLength) {
+            if (filterRangeLength.contains(searchedRange.getLength())
+                && allNotInFilterRangeLength) {
               for (Map.Entry<CacheKey, BitSet> en : cachedBitsets.entrySet()) {
                 cacheManager.remove(en.getKey(), storageLevel);
               }
@@ -609,6 +693,9 @@ public class CohortAggregation implements Operator {
             }
           }
         }
+
+        // TODO: For test
+//        System.out.printf("Selection Time: %.3f ms\n", totalSelectionTime / 1000000);
       }
     }
 

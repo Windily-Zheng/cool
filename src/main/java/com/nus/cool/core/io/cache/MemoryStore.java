@@ -48,7 +48,7 @@ public class MemoryStore {
   public MemoryStore(String path, double memoryCacheSize, double entryCacheLimit)
       throws IOException {
     // TODO: Whether to enable cache access statistics output
-    this.printStatistics = true;
+    this.printStatistics = false;
 
     if (memoryCacheSize <= 0) {
       throw new IllegalArgumentException("Illegal memoryCacheSize: " + memoryCacheSize);
@@ -65,7 +65,8 @@ public class MemoryStore {
     // Output cache access statistics
     if (printStatistics) {
       checkNotNull(path);
-      this.outPath = new File(path, "iceberg-hybrid.csv");
+      // TODO: The output file name
+      this.outPath = new File(path, "iceberg-hybrid-24G.csv");
       this.out = new FileOutputStream(outPath);
       this.osw = new OutputStreamWriter(out, "UTF-8");
       // BOM
