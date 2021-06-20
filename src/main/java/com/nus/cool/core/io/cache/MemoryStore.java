@@ -33,8 +33,8 @@ public class MemoryStore {
 
   private double usedMemorySize; // bits
 
-  private Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
-//  private Map<CacheKey, BitSet> entries = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
+//  private Map<CacheKey, BitSet> entries = new LinkedHashMap<>(16, 0.75f, true);
+  private Map<CacheKey, BitSet> entries = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
 
   private Map<CacheKeyPrefix, SortedSet<Range>> rangeCacheKeys = new java.util.HashMap<>();
 
@@ -66,7 +66,7 @@ public class MemoryStore {
     if (printStatistics) {
       checkNotNull(path);
       // TODO: The output file name
-      this.outPath = new File(path, "iceberg-hybrid-24G.csv");
+      this.outPath = new File(path, "iceberg-hybrid-237G-5G.csv");
       this.out = new FileOutputStream(outPath);
       this.osw = new OutputStreamWriter(out, "UTF-8");
       // BOM

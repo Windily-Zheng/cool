@@ -56,7 +56,7 @@ public class LocalLoader {
     File dimensionFile = new File(cubeRoot, args[3]);
     File dataFile = new File(cubeRoot, args[4]);
     File outputDir = new File(cubeRoot, args[1]);
-    int chunkSize = 10000000;
+    int chunkSize = 50000000;
 
     double memoryCacheSize = (double) 20 * 1024 * 1024 * 1024;
     double diskCacheSize = (double) 40 * 1024 * 1024 * 1024;
@@ -64,7 +64,7 @@ public class LocalLoader {
     cacheManager = new CacheManager(args[2], memoryCacheSize, diskCacheSize, 0.8);
 
     // TODO: Need to get from configuration
-    boolean reuse = true;
+    boolean reuse = false;
     String storageLevel = "DISK_ONLY";
 
     long ingestionStart = System.nanoTime();

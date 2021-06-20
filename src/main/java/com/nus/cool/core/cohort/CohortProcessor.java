@@ -36,14 +36,11 @@ public class CohortProcessor {
   // for testing
   public static double totalAggregationTime = 0;
 
-  // for testing
-  public static int chunkNum = 0;
-
   public List<ResultTuple> executeQuery(CubeRS cube, CohortQuery query, CacheManager cacheManager)
       throws IOException {
     // TODO: Need to get from query
     boolean reuse = true;
-    String storageLevel = "MEMORY_ONLY";
+    String storageLevel = "DISK_ONLY";
     System.out.println("reuse: " + reuse + "\n" + "storageLevel: " + storageLevel);
 
     List<CubletRS> cublets = cube.getCublets();
@@ -65,16 +62,16 @@ public class CohortProcessor {
               cubletFile.substring(0, cubletFile.length() - 3));
           bitSets.add(gamma.getBs());
         }
-
-        // for testing
-        totalSeekTime += gamma.totalSeekTime;
-        totalLoadTime += gamma.totalLoadTime;
-        totalGenerateTime += gamma.totalGenerateTime;
-        totalFilterTime += gamma.totalFilterTime;
-        totalSelectionTime += gamma.totalSelectionTime;
-        totalAggregationTime += gamma.totalAggregationTime;
-        chunkNum += gamma.chunkNum;
       }
+
+      // for testing
+      totalSeekTime += gamma.totalSeekTime;
+      totalLoadTime += gamma.totalLoadTime;
+      totalGenerateTime += gamma.totalGenerateTime;
+      totalFilterTime += gamma.totalFilterTime;
+      totalSelectionTime += gamma.totalSelectionTime;
+      totalAggregationTime += gamma.totalAggregationTime;
+
 //      if (tag) {
 //        int end = cublet.getLimit();
 //        DataOutputStream out = map.get(cublet.getFile());

@@ -168,6 +168,10 @@ public class ChunkWS implements Output {
     // Write chunkID
     out.writeInt(IntegerUtil.toNativeByteOrder(this.chunkID));
     bytesWritten += Ints.BYTES;
+
+    // TODO: Output for log
+    System.out.println(this.chunkID);
+
     // Write #records
     out.writeInt(IntegerUtil.toNativeByteOrder(this.count));
     bytesWritten += Ints.BYTES;

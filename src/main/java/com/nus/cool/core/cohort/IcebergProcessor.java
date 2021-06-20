@@ -91,14 +91,15 @@ public class IcebergProcessor {
           long aggregationEnd = System.nanoTime();
           totalAggregationTime += (aggregationEnd - aggregationStart);
         }
-        // for testing
-        totalLoadTime += selection.totalLoadTime;
-        totalGenerateTime += selection.totalGenerateTime;
-        totalFilterTime += selection.totalFilterTime;
-        totalSelectionTime += selection.totalSelectionTime;
-        totaltimeFilterTime += selection.totalTimeFilterTime;
       }
     }
+    // for testing
+    totalLoadTime += selection.totalLoadTime;
+    totalGenerateTime += selection.totalGenerateTime;
+    totalFilterTime += selection.totalFilterTime;
+    totalSelectionTime += selection.totalSelectionTime;
+    totaltimeFilterTime += selection.totalTimeFilterTime;
+
     results = BaseResult.merge(results);
     return results;
   }

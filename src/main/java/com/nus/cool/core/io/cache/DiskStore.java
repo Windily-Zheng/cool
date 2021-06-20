@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
@@ -38,8 +39,8 @@ public class DiskStore {
 
   private double usedDiskSize;
 
-    private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
-//  private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
+//    private Map<CacheKey, Integer> blockSizes = new LinkedHashMap<>(16, 0.75f, true);
+  private Map<CacheKey, Integer> blockSizes = new BubbleLRULinkedHashMap<>(16, 0.75f, true);
 
   private Map<CacheKeyPrefix, SortedSet<Range>> rangeCacheKeys = new java.util.HashMap<>();
 
@@ -178,9 +179,15 @@ public class DiskStore {
         blockSizes.get(cacheKey);
         File cacheFile = new File(cacheRoot, cacheKey.getFileName());
         if (cacheFile.exists()) {
-          ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
-          BitSet bitSet = SimpleBitSetCompressor.read(buffer);
-          cachedBitsets.put(cacheKey, bitSet);
+          try {
+            ByteBuffer buffer = Files.map(cacheFile).order(ByteOrder.nativeOrder());
+            BitSet bitSet = SimpleBitSetCompressor.read(buffer);
+            cachedBitsets.put(cacheKey, bitSet);
+          }
+          catch (BufferUnderflowException e) {
+            System.out.println("Exception thrown: " + e);
+            System.out.println("CacheKey: " + cacheKey.toString());
+          }
         }
       }
     }
