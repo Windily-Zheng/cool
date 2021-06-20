@@ -286,17 +286,39 @@ public class IcebergSelection {
               toCacheBitsets.put(id, bitSet);
             }
           }
+
           // Traverse InputVector to generate missing bitsets
+          // TODO: Optimize
+          BitSet ageBitset = new BitSet(chunk.getRecords());
+          for (Map.Entry<Integer, BitSet> en : cachedBitsets.entrySet()) {
+            ageBitset.or(en.getValue());
+          }
+          // Avoid repeating the or operation in the subsequent filter process
+          cachedBitsets.clear();
+          cachedBitsets.put(-1, ageBitset);
+
           InputVector fieldIn = field.getValueVector();
-          int off = 0;
+//          int off = 0;
+          // Search in bit=0
+          int off = ageBitset.nextClearBit(0);
           fieldIn.skipTo(off);
-          while (fieldIn.hasNext()) {
+          while (off < fieldIn.size() && off >= 0) {
+            fieldIn.skipTo(off);
             int key = fieldIn.next();
             if (toCacheBitsets.containsKey(key)) {
               toCacheBitsets.get(key).set(off);
             }
-            off++;
+            off = ageBitset.nextClearBit(off + 1);
           }
+
+//          while (fieldIn.hasNext()) {
+//            int key = fieldIn.next();
+//            if (toCacheBitsets.containsKey(key)) {
+//              toCacheBitsets.get(key).set(off);
+//            }
+//            off++;
+//          }
+
           // Add missing bitsets to cache
           for (Map.Entry<Integer, BitSet> entry : toCacheBitsets.entrySet()) {
             CacheKey cacheKey = new CacheKey(cubletFileName, dimension, chunk.getChunkID(),
